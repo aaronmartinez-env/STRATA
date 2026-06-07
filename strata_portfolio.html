@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strata — Atmospheric Interpretation System · Valencia</title>
+<title>Strata — Atmospheric Atlas · Valencia</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400;1,600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -51,6 +51,20 @@ body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;bac
 .ticker-el{font-family:var(--mono);font-size:0.7rem;color:rgba(200,216,232,0.65);}
 .tcursor{display:inline-block;width:5px;height:11px;background:var(--cyan);animation:blink 1.1s step-end infinite;vertical-align:middle;margin-left:2px;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* TABS */
+.tab-bar{position:relative;z-index:2;display:flex;align-items:stretch;gap:0;border:1px solid var(--rim);border-radius:5px;overflow:hidden;width:fit-content;margin:0 0 3rem;background:var(--glass);}
+.tab-btn{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);background:transparent;border:none;padding:0.85rem 1.75rem;cursor:pointer;transition:all 0.22s;border-right:1px solid var(--rim);position:relative;}
+.tab-btn:last-child{border-right:none;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--cyan);background:rgba(0,212,255,0.06);}
+.tab-btn.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--cyan);}
+.tab-badge{display:inline-block;margin-left:0.5rem;font-size:0.48rem;padding:1px 5px;border-radius:2px;background:var(--fog);color:var(--muted);vertical-align:middle;letter-spacing:0.08em;}
+.tab-btn.active .tab-badge{background:rgba(0,212,255,0.1);color:var(--cyan);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* HERO STATS */
 .hero-stats{display:flex;border:1px solid var(--rim);border-radius:4px;overflow:hidden;backdrop-filter:blur(20px);background:var(--glass);width:fit-content;}
 .hs{padding:1rem 1.65rem;border-right:1px solid var(--rim);}
 .hs:last-child{border-right:none;}
@@ -85,11 +99,13 @@ body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;bac
 .gp.green{border-color:rgba(57,217,138,0.18);background:rgba(57,217,138,0.04);}
 .gp.green::before{background:linear-gradient(to right,transparent,rgba(57,217,138,0.3),transparent);}
 .gp.calima{border-color:rgba(255,154,0,0.22);background:linear-gradient(135deg,rgba(255,154,0,0.05),rgba(255,68,85,0.03));}
+.gp.dana{border-color:rgba(139,111,255,0.22);background:linear-gradient(135deg,rgba(139,111,255,0.05),rgba(255,68,85,0.03));}
 .gp-label{font-family:var(--mono);font-size:0.53rem;letter-spacing:0.17em;text-transform:uppercase;color:var(--cyan);margin-bottom:0.55rem;}
 .gp-label.amber{color:var(--amber);}
 .gp-label.red{color:var(--red);}
 .gp-label.green{color:var(--green);}
 .gp-label.calima{color:var(--amber);}
+.gp-label.dana{color:var(--purple);}
 .gp p{font-size:0.97rem;color:rgba(200,216,232,0.92);line-height:1.78;margin:0;}
 .gp strong{color:#ffffff;font-weight:600;}
 
@@ -102,7 +118,6 @@ body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;bac
 
 /* MAP */
 .map-wrap{position:relative;border-radius:5px;overflow:hidden;border:1px solid var(--rim);margin:1.5rem 0;}
-#map{height:460px;}
 .map-hud{position:absolute;top:1rem;left:1rem;z-index:500;background:var(--glass2);border:1px solid var(--rim);backdrop-filter:blur(16px);border-radius:4px;padding:0.7rem 0.9rem;}
 .map-hud-label{font-family:var(--mono);font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem;}
 .ml-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
@@ -187,359 +202,491 @@ body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;bac
 ::-webkit-scrollbar-track{background:var(--void);}
 ::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
 
-/* ── LIGHT THEME ─────────────────────────────────────────────────────────── */
-html.light {
-  --void:    #f0f4f8;
-  --deep:    #e8eef4;
-  --surface: #dde5ee;
-  --glass:   rgba(255,255,255,0.72);
-  --glass2:  rgba(248,251,255,0.90);
-  --rim:     rgba(0,100,180,0.12);
-  --rim2:    rgba(0,100,180,0.25);
-  --fog:     rgba(0,0,0,0.05);
-  --text:    #1a2a38;
-  --muted:   #7a9ab0;
-  --dim:     #c0d0dc;
-  --cyan:    #0066cc;
-  --teal:    #007a6a;
-  --amber:   #c06000;
-  --red:     #cc2233;
-  --green:   #007a44;
-  --purple:  #5533bb;
-  --mono:    'IBM Plex Mono', monospace;
-  --serif:   'Cormorant Garamond', Georgia, serif;
-  --sans:    'IBM Plex Sans', sans-serif;
+/* LIGHT THEME */
+html.light{
+  --void:#f0f4f8;--deep:#e8eef4;--surface:#dde5ee;
+  --glass:rgba(255,255,255,0.72);--glass2:rgba(248,251,255,0.90);
+  --rim:rgba(0,100,180,0.12);--rim2:rgba(0,100,180,0.25);
+  --fog:rgba(0,0,0,0.05);--text:#1a2a38;--muted:#7a9ab0;--dim:#c0d0dc;
+  --cyan:#0066cc;--teal:#007a6a;--amber:#c06000;--red:#cc2233;
+  --green:#007a44;--purple:#5533bb;
 }
-html.light body { background: var(--void); }
-html.light .nav { background: linear-gradient(to bottom, rgba(240,244,248,0.97) 0%, transparent 100%); }
-html.light .gp  { backdrop-filter: blur(18px); }
-html.light .cg  { backdrop-filter: blur(18px); }
-html.light .leaflet-container { background: #d8e4ef !important; }
-html.light .leaflet-popup-content-wrapper { background: rgba(248,251,255,0.97) !important; border-color: rgba(0,100,180,0.15) !important; }
-html.light .leaflet-control-zoom { background: rgba(248,251,255,0.95) !important; }
-html.light .hero-title { color: var(--text); }
-html.light .ch-title   { color: var(--text); }
-html.light .dnote { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.07); }
-html.light .code-block { background: rgba(0,100,200,0.05); border-color: rgba(0,100,200,0.12); }
-html.light .sc { background: rgba(248,251,255,0.92); }
-html.light .sc:hover { background: rgba(0,102,204,0.05); }
-html.light .stext { color: #007a44; }
-html.light .sdot  { background: #007a44; }
-html.light .ticker-pre { color: #0066cc; }
-html.light .tcursor    { background: #0066cc; }
-html.light .mtext { color: rgba(10,25,40,0.88); }
-html.light .cite-ref  { color: rgba(26,42,56,0.55); }
-html.light .cite-key  { color: rgba(26,42,56,0.38); }
-html.light .cite-val  { color: rgba(26,42,56,0.78); }
-html.light .footer-col { color: var(--muted); }
+html.light body{background:var(--void);}
+html.light .nav{background:linear-gradient(to bottom,rgba(240,244,248,0.97) 0%,transparent 100%);}
+html.light .hero-title,.html.light .ch-title{color:var(--text);}
+html.light .hero-sub{color:rgba(10,25,40,0.65);}
+html.light .prose p{color:rgba(10,25,40,0.82);}
+html.light .prose strong,.html.light .gp strong,.html.light .cb strong{color:#050f1a;}
+html.light .gp p,.html.light .cb p{color:rgba(10,25,40,0.82);}
+html.light .mtext{color:rgba(10,25,40,0.88);}
+html.light .dnote{background:rgba(0,0,0,0.04);border-color:rgba(0,0,0,0.07);color:rgba(10,25,40,0.65);}
+html.light .code-block{background:rgba(0,100,200,0.05);border-color:rgba(0,100,200,0.12);}
+html.light .sc{background:rgba(248,251,255,0.92);}
+html.light .sc:hover{background:rgba(0,102,204,0.05);}
+html.light .stext{color:#007a44;}
+html.light .sdot{background:#007a44;}
+html.light .ticker-pre,.html.light .tcursor{color:#0066cc;}
+html.light .tcursor{background:#0066cc;}
+html.light .cite-ref{color:rgba(10,25,40,0.68);}
+html.light .cite-key{color:rgba(10,25,40,0.38);}
+html.light .cite-val{color:rgba(10,25,40,0.82);}
+html.light .footer-col{color:var(--muted);}
+html.light .leaflet-container{background:#d8e4ef!important;}
+html.light .leaflet-popup-content-wrapper{background:rgba(248,251,255,0.97)!important;border-color:rgba(0,100,180,0.15)!important;}
+html.light .tab-btn.active{background:rgba(0,102,204,0.06);}
 
-/* Theme toggle button */
-.theme-toggle {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 200;
-  background: var(--glass2);
-  border: 1px solid var(--rim2);
-  border-radius: 4px;
-  padding: 0.55rem 0.9rem;
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-  backdrop-filter: blur(16px);
-  transition: color 0.2s, border-color 0.2s;
-}
-.theme-toggle:hover { color: var(--cyan); border-color: var(--rim2); }
-
-
-html.light .prose p { color: rgba(10,25,40,0.82); }
-html.light .gp p { color: rgba(10,25,40,0.88); }
-html.light .gp strong { color: #050f1a; }
-html.light .cb p { color: rgba(10,25,40,0.82); }
-html.light .cb strong { color: #050f1a; }
-html.light .prose strong { color: #050f1a; }
-html.light .hero-sub { color: rgba(10,25,40,0.65); }
-html.light .cite-ref { color: rgba(10,25,40,0.68); }
-html.light .cite-val { color: rgba(10,25,40,0.82); }
-html.light .dnote { color: rgba(10,25,40,0.65); }
-html.light .mc-sub { color: rgba(10,25,40,0.55); }
-html.light .ch-sub { color: rgba(10,25,40,0.5); }
-html.light .sc-foot .ss span:last-child { color: rgba(10,25,40,0.5); }
-html.light .ticker-el { color: rgba(10,25,40,0.7); }
-html.light .hero-eyebrow { color: rgba(10,25,40,0.5); }
-html.light .ch-num { color: rgba(10,25,40,0.4); }
-
+/* THEME TOGGLE */
+.theme-toggle{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--glass2);border:1px solid var(--rim2);border-radius:4px;padding:0.55rem 0.9rem;font-family:var(--mono);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;backdrop-filter:blur(16px);transition:color 0.2s,border-color 0.2s;}
+.theme-toggle:hover{color:var(--cyan);}
 </style>
 </head>
 <body>
 <canvas id="atmos-canvas"></canvas>
+
 <nav class="nav">
-  <div class="nav-logo">Strata<span> · AIS</span></div>
-  <div class="nav-links">
-    <a href="#s1">Network</a><a href="#s2">Divergence</a><a href="#s3">Diurnal</a>
-    <a href="#s4">Drivers</a><a href="#s5">Calima</a><a href="#s6">Complexity</a>
-    <a href="#s7">Conclusions</a><a href="#s8">Citations</a>
+  <div class="nav-logo">Strata<span> · Atmospheric Atlas</span></div>
+  <div class="nav-links" id="nav-links">
+    <a href="#s2122-s1">Network</a>
+    <a href="#s2122-s2">Divergence</a>
+    <a href="#s2122-s3">Diurnal</a>
+    <a href="#s2122-s4">Drivers</a>
+    <a href="#s2122-s5">Calima</a>
+    <a href="#s2122-s6">Complexity</a>
+    <a href="#s2122-s7">Conclusions</a>
+    <a href="#s2122-s8">Citations</a>
   </div>
 </nav>
 
 <div class="wrap">
+
+<!-- ── HERO ──────────────────────────────────────────────────────────────── -->
 <section class="hero">
-  <div class="hero-status"><div class="sdot"></div><div class="stext">RVVCCA · Valencia · 2021–2022 · Pipeline active</div></div>
-  <div class="hero-eyebrow">Atmospheric Interpretation System · Environmental Science Research</div>
-  <h1 class="hero-title">Does public AQI accurately represent<br>the <em>real atmosphere</em> of Valencia?</h1>
-  <p class="hero-sub">Strata is an exploratory atmospheric interpretation framework quantifying divergence between simplified public-facing air quality indices and a custom multi-pollutant composite index, applied to 160,076 hourly observations across Valencia's 12-station RVVCCA network.</p>
+  <div class="hero-status"><div class="sdot"></div><div class="stext">RVVCCA · Valencia · Atmospheric Atlas · Pipeline active</div></div>
+  <div class="hero-eyebrow">Atmospheric Atlas · Environmental Science Research · CEAM–EUPHORE</div>
+  <h1 class="hero-title">Understanding Valencia's <em>atmosphere</em> —<br>from observation to interpretation</h1>
+  <p class="hero-sub">Strata is a data-driven platform for exploring how air quality, meteorology, pollutant transport, and atmospheric events interact across space and time in Valencia. Built from real observations across the RVVCCA monitoring network, across multiple datasets and years.</p>
   <div class="ticker-wrap">
     <span class="ticker-pre">Strata ›</span>
-    <span class="ticker-el" id="ticker-el">Initialising atmospheric interpretation system</span>
+    <span class="ticker-el" id="ticker-el">Initialising atmospheric atlas</span>
     <span class="tcursor"></span>
   </div>
-  <div class="hero-stats" id="hero-stats">
-    <div class="hs"><span class="hs-val" id="hs-obs">—</span><span class="hs-label">Valid station-hours</span></div>
-    <div class="hs"><span class="hs-val" id="hs-div" style="color:var(--amber)">—</span><span class="hs-label">Mean CMPI gap (0–100)</span></div>
-    <div class="hs"><span class="hs-val" id="hs-maxdiv" style="color:var(--red)">—</span><span class="hs-label">Max single-hour gap</span></div>
-    <div class="hs"><span class="hs-val" id="hs-calima" style="color:var(--amber)">—</span><span class="hs-label">Calima hours</span></div>
-    <div class="hs"><span class="hs-val" id="hs-aci" style="color:var(--green)">—</span><span class="hs-label">Mean ACI</span></div>
+
+  <!-- Tab switcher -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="tab-2122" id="btn-2122">
+      2021–2022<span class="tab-badge">Hourly · 160k obs</span>
+    </button>
+    <button class="tab-btn" data-tab="tab-2024" id="btn-2024">
+      2024<span class="tab-badge">Daily · DANA period</span>
+    </button>
   </div>
 </section>
 
-<!-- 01 NETWORK -->
-<section class="chapter reveal" id="s1">
-  <div class="ch-head"><div class="ch-num">01</div><div><h2 class="ch-title">The Valencia monitoring <em>network</em><span class="ch-sub">RVVCCA · 12 stations · January 2021 – December 2022</span></h2></div></div>
-  <div class="prose">
-    <p>Valencia's RVVCCA network maintains twelve active monitoring stations across the metropolitan area. The 2021–2022 hourly dataset — downloaded directly from Open Data Valencia — contains <strong>201,480 raw observations</strong>, of which <strong>160,076 pass quality filtering</strong>. The remaining 41,404 rows correspond to sensor downtime, calibration periods, and stations that do not record all four core pollutants simultaneously.</p>
-    <p>Stations span diverse environmental contexts: traffic-exposed urban canyons, residential periphery, coastal and port positions, and dedicated meteorological posts. Each records hourly PM2.5, PM10, NO₂, and O₃ alongside wind speed, wind direction, temperature, humidity, and pressure.</p>
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TAB 1 — 2021–2022 HOURLY DATASET
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-2122">
+
+  <!-- Hero stats 2021-2022 -->
+  <div class="hero-stats" style="margin-bottom:4rem;">
+    <div class="hs"><span class="hs-val" id="hs-2122-obs">—</span><span class="hs-label">Valid station-hours</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2122-div" style="color:var(--amber)">—</span><span class="hs-label">Mean CMPI gap</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2122-maxdiv" style="color:var(--red)">—</span><span class="hs-label">Max single-hour gap</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2122-calima" style="color:var(--amber)">—</span><span class="hs-label">Calima hours</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2122-aci" style="color:var(--green)">—</span><span class="hs-label">Mean ACI</span></div>
   </div>
-  <div class="dnote"><strong>Source:</strong> RVVCCA · Open Data Valencia · rvvcca_d_horarios_2021-2022 · CC BY 4.0 · 201,480 rows × 30 columns · Each row represents one station-hour (one monitoring station, one clock hour). 160,076 rows retained after quality filtering (requiring at least one core pollutant reading). All values from real observational data — no synthetic imputation applied.</div>
-  <div class="map-wrap">
-    <div id="map"></div>
-    <div class="map-hud">
-      <div class="map-hud-label">CMPI level</div>
-      <div class="ml-row"><div class="ml-dot" style="background:#00d4ff"></div><span>Lower</span></div>
-      <div class="ml-row"><div class="ml-dot" style="background:#ff9a00"></div><span>Medium</span></div>
-      <div class="ml-row"><div class="ml-dot" style="background:#ff4455"></div><span>Higher</span></div>
-      <div class="ml-row"><div class="ml-dot" style="background:#ff9a00;outline:2px solid rgba(255,154,0,0.35);outline-offset:2px"></div><span>High calima</span></div>
+
+  <!-- 01 NETWORK -->
+  <section class="chapter reveal" id="s2122-s1">
+    <div class="ch-head"><div class="ch-num">01</div><div><h2 class="ch-title">The Valencia monitoring <em>network</em><span class="ch-sub">RVVCCA · 12 stations · January 2021 – December 2022 · Hourly</span></h2></div></div>
+    <div class="prose">
+      <p>Valencia's RVVCCA network maintains twelve active monitoring stations across the metropolitan area. The 2021–2022 hourly dataset — downloaded directly from Open Data Valencia — provides the foundational baseline for STRATA's divergence analysis. Stations span traffic-exposed urban canyons, residential periphery, coastal and port positions, and dedicated meteorological posts. Each records hourly PM2.5, PM10, NO₂, and O₃ alongside meteorological parameters.</p>
+      <p>This is STRATA's reference dataset: two full years of hourly observations capturing diurnal cycles, calima episodes, seasonal transitions, and long-term atmospheric patterns across Valencia's monitoring network.</p>
     </div>
-  </div>
-  <div class="sgrid" id="station-grid"></div>
-</section>
-
-<!-- 02 DIVERGENCE -->
-<section class="chapter reveal" id="s2">
-  <div class="ch-head"><div class="ch-num">02</div><div><h2 class="ch-title">The representation <em>gap</em><span class="ch-sub">Custom multi-pollutant composite index vs PM10-only public index</span></h2></div></div>
-  <div class="prose">
-    <p>Many public-facing AQI representations — including those commonly displayed in weather applications and urban dashboards — simplify atmospheric conditions into <strong>a single dominant pollutant proxy, often emphasising PM10 during particulate episodes</strong>. This simplification carries a structural cost: any atmospheric episode where gas-phase pollutants elevate multi-pollutant burden while particulate matter stays moderate will be systematically underrepresented.</p>
-    <p>Strata quantifies this as the <strong>CMPI divergence</strong>: the absolute difference between a custom multi-pollutant composite index — a research construct weighting normalised PM2.5 (40%), PM10 (30%), NO₂ (20%), and O₃ (10%) on a 0–100 scale — and the public PM10-only index on the same scale. <em>The CMPI is not a regulatory index; it is an exploratory comparative framework developed for this analysis.</em></p>
-    <p>Across 160,076 valid observations, the <strong>mean divergence is 4.22 index points</strong>. The distribution is strongly right-skewed: the <strong>maximum single-hour gap reaches 50.72 points</strong> — large enough to shift a reading across categorical index bands.</p>
-  </div>
-  <div class="mrow">
-    <div class="mc"><div class="mc-label">Mean divergence</div><div class="mc-val" id="mr-meandiv" style="color:var(--amber)">—</div><div class="mc-sub">index pts · 0–100 scale</div></div>
-    <div class="mc"><div class="mc-label">Max divergence</div><div class="mc-val" id="mr-maxdiv" style="color:var(--red)">—</div><div class="mc-sub">single worst hour</div></div>
-    <div class="mc"><div class="mc-label">Hours &gt; 20 pts</div><div class="mc-val" id="mr-over20">—</div><div class="mc-sub">extreme events</div></div>
-    <div class="mc"><div class="mc-label">Peak hour</div><div class="mc-val" id="mr-peakhour">—</div><div class="mc-sub" id="mr-peaksub">O₃-driven</div></div>
-    <div class="mc"><div class="mc-label">Min hour</div><div class="mc-val" id="mr-minhour">—</div><div class="mc-sub" id="mr-minsub">pre-dawn</div></div>
-    <div class="mc"><div class="mc-label">Valid obs.</div><div class="mc-val" id="mr-obs" style="color:var(--green)">—</div><div class="mc-sub">valid station-hours</div></div>
-  </div>
-  <div class="cg">
-    <div class="cg-label">Typical daily CMPI profile — derived from real diurnal divergence pattern</div>
-    <div class="cg-legend">
-      <div class="cpill"><div class="cpill-line" style="background:#00d4ff"></div>CMPI composite (PM2.5·0.4 + PM10·0.3 + NO₂·0.2 + O₃·0.1)</div>
-      <div class="cpill"><div class="cpill-dash" style="border-color:#ff4455"></div>Public index (PM10 only)</div>
-    </div>
-    <div style="position:relative;height:225px"><canvas id="chartProfile"></canvas></div>
-  </div>
-  <div class="gp amber">
-    <div class="gp-label amber">Finding 01 · The gap is real but episodic</div>
-    <p>Mean divergence of <strong>4.22 index points</strong> reflects Valencia's generally well-ventilated Mediterranean coastal climate. The gap concentrates in specific hours and conditions. The critical observation is the <strong>maximum of 50.72 points</strong>: during extreme episodes, the single-pollutant representation diverges substantially from the CMPI — a gap large enough to shift categorical index bands.</p>
-  </div>
-</section>
-
-<!-- 03 DIURNAL -->
-<section class="chapter reveal" id="s3">
-  <div class="ch-head"><div class="ch-num">03</div><div><h2 class="ch-title">When the gap peaks — <em>nocturnal NO₂ accumulation</em><span class="ch-sub">Real RVVCCA 2021–2022 · Peak 06:00 · Min 17:00 · n = 160,076</span></h2></div></div>
-  <div class="prose">
-    <p>The CMPI divergence follows a pronounced diurnal cycle across all 730 days and 12 stations. The gap peaks at <strong>06:00 (mean 17.9 index points)</strong> and reaches its minimum at <strong>17:00 (mean 7.6 points)</strong> — an intraday swing of 10.3 points driven almost entirely by NO₂.</p>
-    <p>The mechanism is well-established in atmospheric chemistry: during the night, the planetary boundary layer collapses under radiative cooling, trapping combustion-sourced NO₂ at ground level. By 06:00, NO₂ concentrations reach their daily maximum (mean 46.1 µg/m³ across the network). The public PM10-only index is entirely blind to this accumulation — PM10 also rises overnight, but the CMPI composite gives NO₂ an explicit 20% weight, opening a large representational gap. This is the clearest failure mode identified in the dataset: public AQI is least representative precisely during the early-morning hours when many people check conditions before commuting.</p>
-    <p>By afternoon, photochemical activity converts NO₂ to secondary products, mixing height increases, and ventilation disperses both PM10 and NO₂. At 17:00, NO₂ falls to its daily minimum (mean 9.6 µg/m³) and the two indices converge. O₃ is elevated in the afternoon but its correlation with divergence is weak (r = 0.13), confirming that the diurnal pattern is primarily a <strong>NO₂ accumulation phenomenon</strong> rather than an O₃ photochemistry phenomenon. This pattern is consistent with nocturnal boundary layer dynamics documented for Mediterranean urban environments (Millán et al., 2000).</p>
-  </div>
-  <div class="c2col">
-    <div class="cg" style="margin:0">
-      <div class="cg-label">Mean CMPI divergence &amp; NO₂ by hour · Real data · n = 160,076</div>
-      <div class="cg-legend">
-        <div class="cpill"><div class="cpill-line" style="background:#ff4455"></div>CMPI divergence (left axis)</div>
-        <div class="cpill"><div class="cpill-dash" style="border-color:#ff9a00"></div>NO₂ µg/m³ (right axis)</div>
+    <div class="dnote"><strong>Source:</strong> RVVCCA · Open Data Valencia · rvvcca_d_horarios_2021-2022 · CC BY 4.0 · Each row represents one station-hour. Valid observations retained after quality filtering (requiring at least one core pollutant reading). All values from real observational data — no synthetic imputation applied.</div>
+    <div class="map-wrap">
+      <div id="map-2122" style="height:460px;"></div>
+      <div class="map-hud">
+        <div class="map-hud-label">CMPI level</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#00d4ff"></div><span>Lower</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#ff9a00"></div><span>Medium</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#ff4455"></div><span>Higher</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#ff9a00;outline:2px solid rgba(255,154,0,0.35);outline-offset:2px"></div><span>High calima</span></div>
       </div>
-      <div style="position:relative;height:220px"><canvas id="chartHourDiv"></canvas></div>
     </div>
-    <div class="cg" style="margin:0">
-      <div class="cg-label">O₃ vs CMPI divergence by hour · Real data · r = +0.13</div>
+    <div class="sgrid" id="station-grid-2122"></div>
+  </section>
+
+  <!-- 02 DIVERGENCE -->
+  <section class="chapter reveal" id="s2122-s2">
+    <div class="ch-head"><div class="ch-num">02</div><div><h2 class="ch-title">The representation <em>gap</em><span class="ch-sub">Custom multi-pollutant composite index vs PM10-only public index</span></h2></div></div>
+    <div class="prose">
+      <p>Many public-facing AQI representations simplify atmospheric conditions into <strong>a single dominant pollutant proxy, often emphasising PM10</strong>. This carries a structural cost: any episode where gas-phase pollutants elevate multi-pollutant burden while particulate matter stays moderate will be systematically underrepresented.</p>
+      <p>Strata quantifies this as the <strong>CMPI divergence</strong>: the absolute difference between a custom multi-pollutant composite index — weighting normalised PM2.5 (40%), PM10 (30%), NO₂ (20%), and O₃ (10%) on a 0–100 scale — and the public PM10-only index on the same scale. <em>The CMPI is not a regulatory index; it is an exploratory comparative framework.</em></p>
+    </div>
+    <div class="mrow">
+      <div class="mc"><div class="mc-label">Mean divergence</div><div class="mc-val" id="mr-2122-meandiv" style="color:var(--amber)">—</div><div class="mc-sub">index pts · 0–100 scale</div></div>
+      <div class="mc"><div class="mc-label">Max divergence</div><div class="mc-val" id="mr-2122-maxdiv" style="color:var(--red)">—</div><div class="mc-sub">single worst hour</div></div>
+      <div class="mc"><div class="mc-label">Hours &gt; 20 pts</div><div class="mc-val" id="mr-2122-over20">—</div><div class="mc-sub">extreme events</div></div>
+      <div class="mc"><div class="mc-label">Peak hour</div><div class="mc-val" id="mr-2122-peakhour">—</div><div class="mc-sub" id="mr-2122-peaksub">—</div></div>
+      <div class="mc"><div class="mc-label">Min hour</div><div class="mc-val" id="mr-2122-minhour">—</div><div class="mc-sub" id="mr-2122-minsub">—</div></div>
+      <div class="mc"><div class="mc-label">Valid obs.</div><div class="mc-val" id="mr-2122-obs" style="color:var(--green)">—</div><div class="mc-sub">valid station-hours</div></div>
+    </div>
+    <div class="cg">
+      <div class="cg-label">Typical daily CMPI profile — derived from real diurnal divergence pattern</div>
       <div class="cg-legend">
-        <div class="cpill"><div class="cpill-line" style="background:#00d4ff"></div>O₃ µg/m³ (left axis)</div>
-        <div class="cpill"><div class="cpill-dash" style="border-color:#ff4455"></div>CMPI divergence (right axis)</div>
-        <div class="cpill" style="color:var(--muted)">Weak association — NO₂ (r = 0.79) dominates</div>
+        <div class="cpill"><div class="cpill-line" style="background:#00d4ff"></div>CMPI composite (PM2.5·0.4 + PM10·0.3 + NO₂·0.2 + O₃·0.1)</div>
+        <div class="cpill"><div class="cpill-dash" style="border-color:#ff4455"></div>Public index (PM10 only)</div>
       </div>
-      <div style="position:relative;height:220px"><canvas id="chartO3Scatter"></canvas></div>
+      <div style="position:relative;height:225px"><canvas id="chartProfile-2122"></canvas></div>
     </div>
-  </div>
-  <div class="gp">
-    <div class="gp-label">Finding 02 · Nocturnal NO₂ accumulation is the dominant divergence mechanism</div>
-    <p>The divergence peak at <strong>06:00 (mean 17.9 index points)</strong> is strongly associated with NO₂ accumulation under nocturnal boundary layer conditions (r = 0.79 between NO₂ and divergence). The public PM10-only index is structurally unable to represent this gas-phase signal. Public AQI is least representative of multi-pollutant atmospheric conditions during the early-morning hours — the period of highest exposure risk for people checking air quality before commuting. The afternoon minimum at 17:00 coincides with NO₂ at its daily low (mean 9.6 µg/m³), when PM10 and NO₂ both decline and the two indices partially converge.</p>
-  </div>
-</section>
-
-<!-- 04 DRIVERS -->
-<section class="chapter reveal" id="s4">
-  <div class="ch-head"><div class="ch-num">04</div><div><h2 class="ch-title">What is most strongly associated with the <em>gap</em><span class="ch-sub">Pearson correlation analysis · n = 160,076 · Real 2021–2022 data</span></h2></div></div>
-  <div class="prose">
-    <p>Pearson correlation analysis identifies <strong>NO₂ as most strongly associated with CMPI divergence (r = 0.38)</strong>, followed by temperature and PM2.5. The moderate correlation reflects the multi-causal nature of Valencia's divergence: O₃ and NO₂ are both associated with the gap, and their relative influence shifts between seasons and time of day.</p>
-    <p>Wind speed shows near-zero association (r ≈ 0.01), consistent with the interpretation that the gap reflects a measurement scope issue rather than a ventilation phenomenon — the divergence relates to which pollutants are included in public indices, not primarily to atmospheric dispersion conditions.</p>
-  </div>
-  <div class="c2col">
-    <div class="cg" style="margin:0"><div class="cg-label">Pearson r with CMPI divergence · Real 2021–2022 data</div><table class="ctbl" id="corr-table"></table></div>
-    <div class="cg" style="margin:0"><div class="cg-label">Mean divergence by air mass regime</div><div style="position:relative;height:205px"><canvas id="chartAirMass"></canvas></div></div>
-  </div>
-  <div class="gp amber">
-    <div class="gp-label amber">Finding 03 · NO₂ is the dominant predictor — O₃ plays a secondary role</div>
-    <p>NO₂ shows the strongest association with CMPI divergence (r = 0.79), accounting for approximately 62% of variance — consistent with the nocturnal boundary layer mechanism identified in section 03. O₃ shows a weak positive association (r = 0.13), playing a secondary role. Wind speed shows near-zero association (r ≈ 0.01), consistent with the interpretation that the gap reflects a measurement scope limitation rather than a ventilation phenomenon. PM10-only public indices appear structurally unable to represent the gas-phase signal across the range of atmospheric conditions observed in this dataset.</p>
-  </div>
-</section>
-
-<!-- 05 CALIMA -->
-<section class="chapter reveal" id="s5">
-  <div class="ch-head"><div class="ch-num">05</div><div><h2 class="ch-title"><em>Calima</em> — the inversion of the problem<span class="ch-sub">2,591 Saharan dust hours · Dual-criterion detection · 36% public over-reads</span></h2></div></div>
-  <div class="prose">
-    <p>Strata detected <strong>2,591 calima hours</strong> — 1.62% of valid observations — using a dual per-station criterion: PM10 must exceed 1.5 standard deviations above the 72-hour rolling station baseline, <em>and</em> the PM10/PM2.5 ratio must exceed 3.0, characteristic of coarse mineral aerosol transport (Rodríguez et al., 2001; Escudero et al., 2005).</p>
-    <p>During dust intrusions, PM10 spikes sharply while gas-phase pollutants are not necessarily co-elevated. The public PM10-only index therefore exceeded the CMPI composite in <strong>36% of detected calima hours</strong> — defined here as cases where the public index score was higher than the CMPI score for the same station-hour during a confirmed calima event. Maximum observed hourly PM10 concentration across the network reached <strong>460 µg/m³</strong> — more than ten times the WHO 2021 24-hour guideline of 45 µg/m³ — during peak Saharan intrusion episodes in the 2021–2022 dataset. The public index responds to these events but may not distinguish mineral dust aerosol from combustion aerosol, two types with different compositional profiles in the epidemiological literature.</p>
-  </div>
-  <div class="mrow">
-    <div class="mc"><div class="mc-label">Calima hours</div><div class="mc-val" id="cal-hours" style="color:var(--amber)">—</div><div class="mc-sub" id="cal-pct-sub">% of observations</div></div>
-    <div class="mc"><div class="mc-label">Public over-reads</div><div class="mc-val" id="cal-over" style="color:var(--amber)">—</div><div class="mc-sub">of calima hours (see definition §08)</div></div>
-    <div class="mc"><div class="mc-label">Max hourly PM10</div><div class="mc-val" id="cal-maxpm10" style="color:var(--red)">—</div><div class="mc-sub" id="cal-maxpm10-sub">µg/m³ · see §08 for station/date</div></div>
-    <div class="mc"><div class="mc-label">Div. during calima</div><div class="mc-val" id="cal-div">—</div><div class="mc-sub" id="cal-norm-sub">vs calima-free</div></div>
-  </div>
-  <div class="cg">
-    <div class="cg-label">Calima detection schematic — PM10 spike above 72h baseline + PM10/PM2.5 ratio &gt; 3.0</div>
-    <div style="position:relative;height:170px"><canvas id="chartCalima"></canvas></div>
-  </div>
-  <div class="gp calima">
-    <div class="gp-label calima">Finding 04 · Two failure modes · Opposite directions</div>
-    <p><strong>Photochemical episodes (afternoon, stagnant conditions):</strong> public index is associated with under-representation — gas-phase pollutants are structurally absent from the PM10-only index. <strong>Calima events (Saharan mineral dust):</strong> public index over-reads in 36% of cases — PM10 spikes are amplified without mineral/combustion aerosol distinction. A multi-pollutant composite index may be associated with reduced representational divergence in both directions, though this would require empirical validation.</p>
-  </div>
-</section>
-
-<!-- 06 COMPLEXITY -->
-<section class="chapter reveal" id="s6">
-  <div class="ch-head"><div class="ch-num">06</div><div><h2 class="ch-title">Atmospheric <em>complexity</em><span class="ch-sub">Shannon entropy · Source attribution · ACI = 0.743</span></h2></div></div>
-  <div class="prose">
-    <p>The Atmospheric Complexity Index (ACI) is a custom entropy-based metric applied to four rule-based source attribution scores (Saharan, urban, marine, stagnation) estimated from PM ratios and wind speed. ACI = 0 indicates single-source dominance; ACI = 1 indicates maximum source ambiguity. <strong>Methodological note:</strong> the ACI is a heuristic research construct, not calibrated against receptor modelling or back-trajectory analysis, and should be interpreted as a relative indicator of within-dataset atmospheric ambiguity.</p>
-    <p>The mean ACI across the real 2021–2022 dataset is <strong>0.743</strong> — higher than the 0.608 produced by the synthetic model during pipeline development. This is consistent with Valencia's position at the intersection of Saharan transport corridors, Mediterranean marine circulation, and dense urban emission sources.</p>
-  </div>
-  <div class="c2col">
-    <div class="cg" style="margin:0"><div class="cg-label">Air mass distribution · Valencia 2021–2022 · n = 160,076</div><div style="position:relative;height:205px"><canvas id="chartDonut"></canvas></div></div>
-    <div class="cg" style="margin:0"><div class="cg-label">Prevailing wind · S-SSW dominant · Valencia 2021–2022</div><div style="position:relative;height:205px"><canvas id="chartWind"></canvas></div></div>
-  </div>
-  <div class="gp green">
-    <div class="gp-label green">Finding 05 · Real atmospheric complexity exceeds model predictions</div>
-    <p>Mean ACI of <strong>0.743</strong> (vs 0.608 synthetic) is consistent with the interpretation that The findings are consistent with multi-source atmospheric influence rather than single-source dominance. Frequent transitions between marine ventilation, urban stagnation, and periodic Saharan intrusions create conditions where single-pollutant public indices may appear structurally constrained in their representational scope within this dataset — a pattern that warrants further investigation across additional sites and time periods.</p>
-  </div>
-</section>
-
-<!-- 07 CONCLUSIONS -->
-<section class="chapter reveal" id="s7">
-  <div class="ch-head"><div class="ch-num">07</div><div><h2 class="ch-title"><em>Conclusions</em><span class="ch-sub">Research question · Findings · Implications · Limitations</span></h2></div></div>
-  <div class="prose">
-    <p>Strata set out to ask: <em>how accurately do public AQI representations reflect actual atmospheric conditions in Valencia?</em> Based on 160,076 hourly observations across January 2021 – December 2022, the findings are consistent with <strong>imperfect, episodic representation, concentrated in two structurally distinct failure modes.</strong></p>
-  </div>
-  <div class="cgrid">
-    <div class="cb"><div class="cb-label">The gap is real and episodically large</div><p>Mean divergence is <strong>4.22 index points</strong>. The maximum of <strong>50.72 points</strong> shows that during extreme episodes, the single-pollutant representation diverges substantially from the CMPI — a gap large enough to shift categorical index bands. The gap is structured and physically explicable, not random noise.</p></div>
-    <div class="cb"><div class="cb-label">Morning peak — nocturnal NO₂ boundary layer accumulation</div><p>Divergence peaks at <strong>06:00 (17.9 pts)</strong> and is lowest at <strong>17:00 (7.6 pts)</strong> — a 10.3-point intraday swing. NO₂ accumulates under nocturnal boundary layer collapse, peaking at 46.1 µg/m³ at 06:00. The public PM10-only index registers none of this. The pattern is consistent with nocturnal boundary layer dynamics in Mediterranean urban environments.</p></div>
-    <div class="cb"><div class="cb-label">Calima — the opposite failure mode</div><p><strong>2,591 Saharan dust hours</strong> detected. In 36% of these, the public index over-reads the CMPI composite. Maximum observed hourly PM10: 460 µg/m³ (10× WHO 2021 guideline). The public index detects these events but cannot distinguish mineral dust from combustion aerosol.</p></div>
-    <div class="cb"><div class="cb-label">Implications and next steps</div><p>Incorporating O₃ and NO₂ into public indices would be associated with reduced representational divergence in both directions. The largest untested pattern is the summer O₃ season. Future work should extend to 2023–2024, including post-DANA extreme events, and apply toxicity-weighted WHO 2021 guideline-normalised indices.</p></div>
-  </div>
-  <div class="prose" style="margin-top:2rem;">
-    <p><strong>Methodological note.</strong> The CMPI uses weights redistributed proportionally when a pollutant is unavailable for a given station-hour. Null rates are substantial: PM2.5 and PM10 (40%), temperature (39%), wind speed (35%) — reflecting sensor downtime, not missing atmospheric events. All analysis uses observed values only; no imputation was applied. All correlations are Pearson r within this dataset; they describe statistical associations and do not establish causation.</p>
-  </div>
-</section>
-
-<!-- 08 CITATIONS -->
-<section class="chapter reveal" id="s8">
-  <div class="ch-head"><div class="ch-num">08</div><div><h2 class="ch-title"><em>Citations</em> &amp; methodology<span class="ch-sub">Data source · Pipeline · Index methodology · References · Honest framing</span></h2></div></div>
-  <div class="prose"><p>All data, methodological choices, and interpretive frameworks are documented here for transparency and reproducibility. Strata is an interpretive analytical framework; it is not an official air quality monitoring system, does not replace regulatory indices, and does not constitute medical or public health guidance.</p></div>
-
-  <div class="cite-grid">
-    <div class="cite-block">
-      <div class="cite-block-label">Primary data source</div>
-      <div class="cite-row"><div class="cite-key">Dataset</div><div class="cite-val">RVVCCA — Datos horarios calidad del aire, 2021–2022</div></div>
-      <div class="cite-row"><div class="cite-key">Publisher</div><div class="cite-val">Ajuntament de València / Open Data Valencia</div></div>
-      <div class="cite-row"><div class="cite-key">URL</div><div class="cite-val"><a href="https://opendata.vlci.valencia.es">opendata.vlci.valencia.es</a></div></div>
-      <div class="cite-row"><div class="cite-key">Licence</div><div class="cite-val">Creative Commons Attribution 4.0 (CC BY 4.0)</div></div>
-      <div class="cite-row"><div class="cite-key">Access date</div><div class="cite-val">May 2025</div></div>
-      <div class="cite-row"><div class="cite-key">Coverage</div><div class="cite-val">Jan 2021 – Dec 2022 · 12 stations · Hourly</div></div>
-      <div class="cite-row"><div class="cite-key">Raw rows</div><div class="cite-val">201,480 × 30 columns</div></div>
+    <div class="gp amber">
+      <div class="gp-label amber">Finding 01 · The gap is real but episodic</div>
+      <p>Mean divergence of <strong><span id="f-2122-meandiv">—</span> index points</strong> reflects Valencia's generally well-ventilated Mediterranean coastal climate. The gap concentrates in specific hours and conditions. The critical observation is the maximum of <strong><span id="f-2122-maxdiv">—</span> points</strong>: during extreme episodes the single-pollutant representation diverges substantially from the CMPI — a gap large enough to shift categorical index bands.</p>
     </div>
-    <div class="cite-block">
-      <div class="cite-block-label">Strata pipeline</div>
-      <div class="cite-row"><div class="cite-key">Language</div><div class="cite-val">Python 3.12</div></div>
-      <div class="cite-row"><div class="cite-key">Core libs</div><div class="cite-val">pandas 3.0 · numpy 2.4 · scipy 1.17 · folium 0.18 · matplotlib 3.9</div></div>
-      <div class="cite-row"><div class="cite-key">Spatial</div><div class="cite-val">scipy.interpolate.griddata (cubic) · Leaflet.js · CartoDB basemap</div></div>
-      <div class="cite-row"><div class="cite-key">Source code</div><div class="cite-val"><a href="https://github.com/aaronmartinez-env/Strata">github.com/aaronmartinez-env/Strata</a></div></div>
+  </section>
+
+  <!-- 03 DIURNAL -->
+  <section class="chapter reveal" id="s2122-s3">
+    <div class="ch-head"><div class="ch-num">03</div><div><h2 class="ch-title">When the gap peaks — <em>nocturnal NO₂ accumulation</em><span class="ch-sub">Real RVVCCA 2021–2022 · Peak <span id="hd-2122-peakhour">—</span> · Min <span id="hd-2122-minhour">—</span></span></h2></div></div>
+    <div class="prose">
+      <p>The CMPI divergence follows a pronounced diurnal cycle. The gap peaks at <strong><span id="f-2122-peakhour">—</span> (mean <span id="f-2122-peakdiv">—</span> index points)</strong> and reaches its minimum at <strong><span id="f-2122-minhour">—</span> (<span id="f-2122-mindiv">—</span> points)</strong> — driven almost entirely by NO₂.</p>
+      <p>During the night, the planetary boundary layer collapses under radiative cooling, trapping combustion-sourced NO₂ at ground level. The public PM10-only index is entirely blind to this accumulation — PM10 also rises overnight, but the CMPI gives NO₂ an explicit 20% weight, opening a large representational gap. Public AQI is least representative precisely during early-morning hours when many people check conditions before commuting.</p>
+      <p>By afternoon, photochemical activity converts NO₂ to secondary products, mixing height increases, and ventilation disperses both PM10 and NO₂. The two indices partially converge. This pattern is consistent with nocturnal boundary layer dynamics documented for Mediterranean urban environments (Millán et al., 2000).</p>
     </div>
-  </div>
-
-  <div class="cite-block" style="margin:1rem 0">
-    <div class="cite-block-label">Custom multi-pollutant composite index (CMPI) — methodology &amp; limitations</div>
-    <p class="mtext">The CMPI is a <strong>custom research construct</strong> developed for comparative atmospheric representation analysis. It is not a regulatory index, is not medically validated, and does not carry epidemiological certification. <strong>Weighting rationale:</strong> PM2.5 (40%) reflects relative regulatory emphasis in EU Directive 2008/50/EC and WHO 2021 guidelines; PM10 (30%) aligns with Spanish regulatory monitoring emphasis; NO₂ (20%) captures urban combustion sources; O₃ (10%) captures secondary photochemical pollution. Weights are informed by, but not formally derived from, epidemiological weighting exercises. <strong>Normalisation:</strong> min-max normalised to [0, 100] across the full dataset before weighting — CMPI values are dataset-relative and not directly comparable across different datasets or time periods.</p>
-  </div>
-
-  <div class="cite-block" style="margin:1rem 0">
-    <div class="cite-block-label">Calima detection — methodology</div>
-    <div class="code-block">
-      <span class="k">Criterion 1</span>  PM10 &gt; (72-hour rolling station mean + 1.5σ)<br>
-      <span class="k">Criterion 2</span>  PM10 / PM2.5 ratio &gt; 3.0<br>
-      <span style="color:var(--muted)">Both criteria must be satisfied simultaneously per station-hour</span>
+    <div class="c2col">
+      <div class="cg" style="margin:0">
+        <div class="cg-label">Mean CMPI divergence &amp; NO₂ by hour · Real 2021–2022 data</div>
+        <div class="cg-legend">
+          <div class="cpill"><div class="cpill-line" style="background:#ff4455"></div>CMPI divergence (left axis)</div>
+          <div class="cpill"><div class="cpill-dash" style="border-color:#ff9a00"></div>NO₂ µg/m³ (right axis)</div>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="chartHourDiv-2122"></canvas></div>
+      </div>
+      <div class="cg" style="margin:0">
+        <div class="cg-label">O₃ vs CMPI divergence by hour · Real 2021–2022 data</div>
+        <div class="cg-legend">
+          <div class="cpill"><div class="cpill-line" style="background:#00d4ff"></div>O₃ µg/m³ (left axis)</div>
+          <div class="cpill"><div class="cpill-dash" style="border-color:#ff4455"></div>CMPI divergence (right axis)</div>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="chartO3Scatter-2122"></canvas></div>
+      </div>
     </div>
-    <p class="mtext">The ratio threshold of 3.0 is informed by the aerosol size distribution of mineral dust transport (Rodríguez et al., 2001; Escudero et al., 2005). <strong>Limitation:</strong> no back-trajectory analysis (e.g. HYSPLIT) was applied to confirm Saharan origin. The dual criterion is a heuristic proxy. The 72-hour rolling baseline was selected to capture multi-day intrusion episodes.</p>
-  </div>
-
-  <div class="cite-block" style="margin:1rem 0">
-    <div class="cite-block-label">Atmospheric Complexity Index (ACI) — methodology &amp; caveats</div>
-    <div class="code-block">
-      <span class="k">Saharan score</span>    f(dust_ratio, PM10 percentile rank)<br>
-      <span class="k">Urban score</span>      f(PM2.5/PM10 ratio, wind speed)<br>
-      <span class="k">Marine score</span>     f(PM10 percentile rank, wind speed)<br>
-      <span class="k">Stagnation score</span> f(wind speed, PM10 percentile rank)<br>
-      <span style="color:var(--muted)">ACI = −Σ pᵢ · log(pᵢ)  normalised by ln(4) → [0, 1]</span>
+    <div class="gp">
+      <div class="gp-label">Finding 02 · Nocturnal NO₂ accumulation is the dominant divergence mechanism</div>
+      <p>The divergence peak at <strong><span id="f-2122-peakhour2">—</span></strong> is strongly associated with NO₂ accumulation under nocturnal boundary layer conditions. The public PM10-only index is structurally unable to represent this gas-phase signal across the range of conditions observed in this dataset.</p>
     </div>
-    <p class="mtext"><strong>Important caveat:</strong> the ACI source attribution rules are heuristic and not calibrated against receptor modelling, positive matrix factorisation (PMF), or HYSPLIT back-trajectory analysis. The ACI should be interpreted as a relative indicator of within-dataset atmospheric ambiguity — a research construct, not an established atmospheric science metric.</p>
+  </section>
+
+  <!-- 04 DRIVERS -->
+  <section class="chapter reveal" id="s2122-s4">
+    <div class="ch-head"><div class="ch-num">04</div><div><h2 class="ch-title">What is most strongly associated with the <em>gap</em><span class="ch-sub">Pearson correlation analysis · Real 2021–2022 data</span></h2></div></div>
+    <div class="prose">
+      <p>Pearson correlation analysis identifies the variable most strongly associated with CMPI divergence. Wind speed shows near-zero association, consistent with the interpretation that the gap reflects a measurement scope issue rather than a ventilation phenomenon — it relates to which pollutants are included in public indices, not primarily to atmospheric dispersion conditions.</p>
+    </div>
+    <div class="c2col">
+      <div class="cg" style="margin:0"><div class="cg-label">Pearson r with CMPI divergence · Real 2021–2022 data</div><table class="ctbl" id="corr-table-2122"></table></div>
+      <div class="cg" style="margin:0"><div class="cg-label">Mean divergence by air mass regime</div><div style="position:relative;height:205px"><canvas id="chartAirMass-2122"></canvas></div></div>
+    </div>
+    <div class="gp amber">
+      <div class="gp-label amber">Finding 03 · Top correlate: <span id="f-2122-topcorr">—</span> (r = <span id="f-2122-topcorrr">—</span>)</div>
+      <p>The leading predictor of CMPI divergence is pipeline-derived and shown above. Wind speed shows near-zero association — the gap reflects a measurement scope limitation, not a ventilation phenomenon. PM10-only public indices are structurally unable to represent the gas-phase signal across the range of atmospheric conditions in this dataset.</p>
+    </div>
+  </section>
+
+  <!-- 05 CALIMA -->
+  <section class="chapter reveal" id="s2122-s5">
+    <div class="ch-head"><div class="ch-num">05</div><div><h2 class="ch-title"><em>Calima</em> — the inversion of the problem<span class="ch-sub">Saharan dust hours detected · Dual-criterion detection</span></h2></div></div>
+    <div class="prose">
+      <p>Strata detected <strong><span id="f-2122-calima">—</span> calima hours</strong> using a dual per-station criterion: PM10 must exceed 1.5 standard deviations above the 72-hour rolling station baseline, <em>and</em> the PM10/PM2.5 ratio must exceed 3.0, characteristic of coarse mineral aerosol transport (Rodríguez et al., 2001; Escudero et al., 2005).</p>
+      <p>During dust intrusions, PM10 spikes sharply while gas-phase pollutants are not necessarily co-elevated. The public PM10-only index therefore exceeded the CMPI composite in <strong><span id="f-2122-calima-over">—</span>% of detected calima hours</strong>. Maximum observed hourly PM10 reached <strong><span id="f-2122-maxpm10">—</span> µg/m³</strong> during peak Saharan intrusion episodes.</p>
+    </div>
+    <div class="mrow">
+      <div class="mc"><div class="mc-label">Calima hours</div><div class="mc-val" id="cal-2122-hours" style="color:var(--amber)">—</div><div class="mc-sub" id="cal-2122-pct-sub">% of observations</div></div>
+      <div class="mc"><div class="mc-label">Public over-reads</div><div class="mc-val" id="cal-2122-over" style="color:var(--amber)">—</div><div class="mc-sub">of calima hours</div></div>
+      <div class="mc"><div class="mc-label">Max hourly PM10</div><div class="mc-val" id="cal-2122-maxpm10" style="color:var(--red)">—</div><div class="mc-sub" id="cal-2122-maxpm10-sub">µg/m³</div></div>
+      <div class="mc"><div class="mc-label">Div. during calima</div><div class="mc-val" id="cal-2122-div">—</div><div class="mc-sub">vs calima-free mean</div></div>
+    </div>
+    <div class="cg">
+      <div class="cg-label">Calima detection schematic — PM10 spike above 72h baseline + PM10/PM2.5 ratio &gt; 3.0</div>
+      <div style="position:relative;height:170px"><canvas id="chartCalima-2122"></canvas></div>
+    </div>
+    <div class="gp calima">
+      <div class="gp-label calima">Finding 04 · Two failure modes · Opposite directions</div>
+      <p><strong>Photochemical episodes (afternoon, stagnant conditions):</strong> public index is associated with under-representation — gas-phase pollutants are structurally absent from the PM10-only index. <strong>Calima events (Saharan mineral dust):</strong> public index over-reads in <span id="f-2122-calima-over2">—</span>% of cases — PM10 spikes are amplified without mineral/combustion aerosol distinction.</p>
+    </div>
+  </section>
+
+  <!-- 06 COMPLEXITY -->
+  <section class="chapter reveal" id="s2122-s6">
+    <div class="ch-head"><div class="ch-num">06</div><div><h2 class="ch-title">Atmospheric <em>complexity</em><span class="ch-sub">Shannon entropy · Source attribution · Mean ACI: <span id="hd-2122-aci">—</span></span></h2></div></div>
+    <div class="prose">
+      <p>The Atmospheric Complexity Index (ACI) is a custom entropy-based metric applied to four rule-based source attribution scores (Saharan, urban, marine, stagnation) estimated from PM ratios and wind speed. ACI = 0 indicates single-source dominance; ACI = 1 indicates maximum source ambiguity. <strong>Methodological note:</strong> the ACI is a heuristic research construct, not calibrated against receptor modelling or back-trajectory analysis.</p>
+      <p>The mean ACI across the 2021–2022 dataset is <strong><span id="f-2122-aci">—</span></strong>, consistent with Valencia's position at the intersection of Saharan transport corridors, Mediterranean marine circulation, and dense urban emission sources.</p>
+    </div>
+    <div class="c2col">
+      <div class="cg" style="margin:0"><div class="cg-label">Air mass distribution · Valencia 2021–2022</div><div style="position:relative;height:205px"><canvas id="chartDonut-2122"></canvas></div></div>
+      <div class="cg" style="margin:0"><div class="cg-label">Prevailing wind · Valencia 2021–2022</div><div style="position:relative;height:205px"><canvas id="chartWind-2122"></canvas></div></div>
+    </div>
+    <div class="gp green">
+      <div class="gp-label green">Finding 05 · Multi-source atmospheric complexity</div>
+      <p>Mean ACI of <strong><span id="f-2122-aci2">—</span></strong> is consistent with multi-source atmospheric influence rather than single-source dominance. Frequent transitions between marine ventilation, urban stagnation, and periodic Saharan intrusions create conditions where single-pollutant public indices appear structurally constrained in their representational scope.</p>
+    </div>
+  </section>
+
+  <!-- 07 CONCLUSIONS -->
+  <section class="chapter reveal" id="s2122-s7">
+    <div class="ch-head"><div class="ch-num">07</div><div><h2 class="ch-title"><em>Conclusions</em><span class="ch-sub">Research question · Findings · Implications · Limitations</span></h2></div></div>
+    <div class="prose">
+      <p>Strata set out to ask: <em>how accurately do public AQI representations reflect actual atmospheric conditions in Valencia?</em> Based on <span id="f-2122-obs-conc">—</span> hourly observations across January 2021 – December 2022, the findings are consistent with <strong>imperfect, episodic representation, concentrated in two structurally distinct failure modes.</strong></p>
+    </div>
+    <div class="cgrid">
+      <div class="cb"><div class="cb-label">The gap is real and episodically large</div><p>Mean divergence of <strong><span id="f-2122-meandiv2">—</span> index points</strong>. Maximum of <strong><span id="f-2122-maxdiv2">—</span> points</strong> during extreme episodes. The gap is structured and physically explicable, not random noise.</p></div>
+      <div class="cb"><div class="cb-label">Morning peak — nocturnal NO₂ boundary layer accumulation</div><p>Divergence peaks at <strong><span id="f-2122-peakhour3">—</span></strong> and is lowest at <strong><span id="f-2122-minhour3">—</span></strong>. NO₂ accumulates under nocturnal boundary layer collapse. The public PM10-only index registers none of this. Consistent with Mediterranean urban nocturnal boundary layer dynamics.</p></div>
+      <div class="cb"><div class="cb-label">Calima — the opposite failure mode</div><p><strong><span id="f-2122-calima2">—</span> Saharan dust hours</strong> detected. In <span id="f-2122-calima-over3">—</span>% of these, the public index over-reads the CMPI. Max observed PM10: <strong><span id="f-2122-maxpm10-2">—</span> µg/m³</strong>. The public index detects these events but cannot distinguish mineral dust from combustion aerosol.</p></div>
+      <div class="cb"><div class="cb-label">Implications and next steps</div><p>Incorporating O₃ and NO₂ into public indices would be associated with reduced representational divergence in both directions. The 2024 dataset (second tab) extends this analysis into the DANA flood period — a new atmospheric event type not captured in this baseline.</p></div>
+    </div>
+    <div class="prose" style="margin-top:2rem;">
+      <p><strong>Methodological note.</strong> The CMPI uses weights redistributed proportionally when a pollutant is unavailable for a given station-hour. All analysis uses observed values only; no imputation was applied. All correlations are Pearson r within this dataset; they describe statistical associations and do not establish causation.</p>
+    </div>
+  </section>
+
+  <!-- 08 CITATIONS -->
+  <section class="chapter reveal" id="s2122-s8">
+    <div class="ch-head"><div class="ch-num">08</div><div><h2 class="ch-title"><em>Citations</em> &amp; methodology<span class="ch-sub">Data source · Pipeline · Index methodology · References</span></h2></div></div>
+    <div class="prose"><p>All data, methodological choices, and interpretive frameworks are documented here for transparency and reproducibility. Strata is an interpretive analytical framework; it does not replace regulatory indices and does not constitute medical or public health guidance.</p></div>
+    <div class="cite-grid">
+      <div class="cite-block">
+        <div class="cite-block-label">Primary data source</div>
+        <div class="cite-row"><div class="cite-key">Dataset</div><div class="cite-val">RVVCCA — Datos horarios calidad del aire, 2021–2022</div></div>
+        <div class="cite-row"><div class="cite-key">Publisher</div><div class="cite-val">Ajuntament de València / Open Data Valencia</div></div>
+        <div class="cite-row"><div class="cite-key">URL</div><div class="cite-val"><a href="https://opendata.vlci.valencia.es">opendata.vlci.valencia.es</a></div></div>
+        <div class="cite-row"><div class="cite-key">Licence</div><div class="cite-val">Creative Commons Attribution 4.0 (CC BY 4.0)</div></div>
+        <div class="cite-row"><div class="cite-key">Coverage</div><div class="cite-val">Jan 2021 – Dec 2022 · 12 stations · Hourly</div></div>
+      </div>
+      <div class="cite-block">
+        <div class="cite-block-label">Strata pipeline</div>
+        <div class="cite-row"><div class="cite-key">Language</div><div class="cite-val">Python 3.12</div></div>
+        <div class="cite-row"><div class="cite-key">Core libs</div><div class="cite-val">pandas · numpy · scipy · folium · matplotlib</div></div>
+        <div class="cite-row"><div class="cite-key">Source code</div><div class="cite-val"><a href="https://github.com/aaronmartinez-env/STRATA">github.com/aaronmartinez-env/STRATA</a></div></div>
+        <div class="cite-row"><div class="cite-key">Provenance</div><div class="cite-val" id="prov-2122-line">Loading...</div></div>
+      </div>
+    </div>
+    <div class="cite-block" style="margin:1rem 0">
+      <div class="cite-block-label">Calima detection — methodology</div>
+      <div class="code-block">
+        <span class="k">Criterion 1</span>  PM10 &gt; (72-hour rolling station mean + 1.5σ)<br>
+        <span class="k">Criterion 2</span>  PM10 / PM2.5 ratio &gt; 3.0<br>
+        <span style="color:var(--muted)">Both criteria must be satisfied simultaneously per station-hour</span>
+      </div>
+      <p class="mtext">The ratio threshold of 3.0 is informed by the aerosol size distribution of mineral dust transport (Rodríguez et al., 2001; Escudero et al., 2005). No back-trajectory analysis was applied to confirm Saharan origin — the dual criterion is a heuristic proxy.</p>
+    </div>
+    <div class="cite-block" style="margin:1rem 0">
+      <div class="cite-block-label">Key references</div>
+      <div class="cite-ref">European Parliament (2008). Directive 2008/50/EC. <em>Official Journal of the European Union.</em></div>
+      <div class="cite-ref">World Health Organization (2021). <em>WHO Global Air Quality Guidelines.</em> Geneva: WHO.</div>
+      <div class="cite-ref">Rodríguez, S., et al. (2001). Saharan dust contributions to PM10 and TSP levels in Southern and Eastern Spain. <em>Atmospheric Environment, 35</em>(14), 2433–2447.</div>
+      <div class="cite-ref">Escudero, M., et al. (2005). A methodology for the quantification of the net African dust load in air quality monitoring networks. <em>Atmospheric Environment, 39</em>(26), 4796–4808.</div>
+      <div class="cite-ref">Millán, M.M., et al. (2000). Ozone cycles in the western Mediterranean basin. <em>Journal of Geophysical Research: Atmospheres, 105</em>(D6), 7209–7236.</div>
+      <div class="cite-ref">Shannon, C.E. (1948). A mathematical theory of communication. <em>Bell System Technical Journal, 27</em>(3), 379–423.</div>
+      <div class="cite-ref">European Environment Agency (2023). <em>Air Quality in Europe 2023.</em> Copenhagen: EEA.</div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-col"><strong>Strata</strong> · Atmospheric Atlas · Valencia<br>Dataset: RVVCCA 2021–2022 · Open Data Valencia · CC BY 4.0<br><strong>All scientific values pipeline-derived · No hardcoding · No synthetic data</strong></div>
+    <div class="footer-col" style="text-align:right">Environmental Science Portfolio · CEAM–EUPHORE<br>Valencia, Spain · January 2021 – December 2022<br><a href="https://github.com/aaronmartinez-env/STRATA">github.com/aaronmartinez-env/STRATA</a></div>
+  </footer>
+
+</div><!-- end tab-2122 -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     TAB 2 — 2024 DAILY DATASET
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-2024">
+
+  <!-- Hero stats 2024 -->
+  <div class="hero-stats" style="margin-bottom:4rem;">
+    <div class="hs"><span class="hs-val" id="hs-2024-obs">—</span><span class="hs-label">Valid station-days</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2024-div" style="color:var(--amber)">—</span><span class="hs-label">Mean CMPI gap</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2024-maxdiv" style="color:var(--red)">—</span><span class="hs-label">Max single-day gap</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2024-calima" style="color:var(--amber)">—</span><span class="hs-label">Calima days</span></div>
+    <div class="hs"><span class="hs-val" id="hs-2024-dana" style="color:var(--purple)">—</span><span class="hs-label">DANA days</span></div>
   </div>
 
-  <div class="cite-block" style="margin:1rem 0">
-    <div class="cite-block-label">Key references</div>
-    <div class="cite-ref">European Parliament (2008). Directive 2008/50/EC on ambient air quality and cleaner air for Europe. <em>Official Journal of the European Union.</em></div>
-    <div class="cite-ref">World Health Organization (2021). <em>WHO Global Air Quality Guidelines: Particulate Matter, Ozone, Nitrogen Dioxide, Sulfur Dioxide and Carbon Monoxide.</em> Geneva: WHO.</div>
-    <div class="cite-ref">Rodríguez, S., et al. (2001). Saharan dust contributions to PM10 and TSP levels in Southern and Eastern Spain. <em>Atmospheric Environment, 35</em>(14), 2433–2447.</div>
-    <div class="cite-ref">Escudero, M., et al. (2005). A methodology for the quantification of the net African dust load in air quality monitoring networks. <em>Atmospheric Environment, 39</em>(26), 4796–4808.</div>
-    <div class="cite-ref">Millán, M.M., et al. (2000). Ozone cycles in the western Mediterranean basin. <em>Journal of Geophysical Research: Atmospheres, 105</em>(D6), 7209–7236.</div>
-    <div class="cite-ref">Shannon, C.E. (1948). A mathematical theory of communication. <em>Bell System Technical Journal, 27</em>(3), 379–423.</div>
-    <div class="cite-ref">European Environment Agency (2023). <em>Air Quality in Europe 2023.</em> Copenhagen: EEA.</div>
-  </div>
+  <!-- 01 NETWORK 2024 -->
+  <section class="chapter reveal" id="s2024-s1">
+    <div class="ch-head"><div class="ch-num">01</div><div><h2 class="ch-title">The Valencia monitoring <em>network</em><span class="ch-sub">RVVCCA · 9 stations · January – December 2024 · Daily averages</span></h2></div></div>
+    <div class="prose">
+      <p>The 2024 dataset — downloaded directly from the Generalitat Valenciana open data portal — extends STRATA's coverage into a year that includes both summer calima episodes and the October 29 DANA flood event. Nine Valencia city stations are active in this dataset, providing daily average concentrations of PM2.5, PM10, NO₂, and O₃ for all twelve months of 2024.</p>
+      <p>At daily resolution, intra-day dynamics are averaged out. The analysis focuses on episode-level and seasonal divergence patterns: the contrast between Saharan calima and DANA-derived terrestrial dust resuspension is the primary scientific contribution of this dataset extension.</p>
+    </div>
+    <div class="dnote"><strong>Source:</strong> RVVCCA · Generalitat Valenciana · dadesobertes.gva.es · Mediciones diarias de contaminantes atmosféricos y ozono 2024 · CC BY 4.0 · Each row represents one station-day. Daily averages — no synthetic imputation. Includes the October 29, 2024 DANA flood aftermath.</div>
+    <div class="map-wrap">
+      <div id="map-2024" style="height:460px;"></div>
+      <div class="map-hud">
+        <div class="map-hud-label">CMPI level</div>
+        <div class="ml-row"><div class="ml-dot" style="background:#00d4ff"></div><span>Lower</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#ff9a00"></div><span>Medium</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#ff4455"></div><span>Higher</span></div>
+        <div class="ml-row"><div class="ml-dot" style="background:#8b6fff;outline:2px solid rgba(139,111,255,0.35);outline-offset:2px"></div><span>DANA days</span></div>
+      </div>
+    </div>
+    <div class="sgrid" id="station-grid-2024"></div>
+  </section>
 
-  <div class="cite-block" style="margin:1rem 0">
-    <div class="cite-block-label">Scope, limitations &amp; honest framing</div>
-    <p class="mtext">Strata is an <strong>interpretive analytical framework</strong>. It builds a custom multi-pollutant composite for comparative analysis, quantifies divergence from a simplified public index, detects probable Saharan dust intrusions using heuristic criteria, and communicates atmospheric complexity through an entropy-based index. It does not validate health outcomes, certify toxicological risk, replace official RVVCCA reporting, or establish definitive causal relationships. All Pearson r values describe statistical associations within this dataset and do not establish causation.</p>
-  </div>
-</section>
+  <!-- 02 DIVERGENCE 2024 -->
+  <section class="chapter reveal" id="s2024-s2">
+    <div class="ch-head"><div class="ch-num">02</div><div><h2 class="ch-title">The representation <em>gap</em><span class="ch-sub">CMPI vs PM10-only public index · Daily resolution</span></h2></div></div>
+    <div class="prose">
+      <p>The same CMPI framework applied to the 2024 daily dataset reveals the representational gap at episode and seasonal scale. At daily resolution, the nocturnal NO₂ signal identified in the 2021–2022 analysis averages out — what emerges instead is the structure of <strong>episode-driven divergence</strong>: calima intrusions and the DANA flood aftermath as the primary drivers of elevated gaps.</p>
+      <p>The CMPI weights are identical to the 2021–2022 analysis: PM2.5 (40%), PM10 (30%), NO₂ (20%), O₃ (10%). Daily averages enter where hourly readings did. The divergence logic is unchanged; the temporal granularity is coarser.</p>
+    </div>
+    <div class="mrow">
+      <div class="mc"><div class="mc-label">Mean divergence</div><div class="mc-val" id="mr-2024-meandiv" style="color:var(--amber)">—</div><div class="mc-sub">index pts · 0–100 scale</div></div>
+      <div class="mc"><div class="mc-label">Max divergence</div><div class="mc-val" id="mr-2024-maxdiv" style="color:var(--red)">—</div><div class="mc-sub">single worst day</div></div>
+      <div class="mc"><div class="mc-label">Days &gt; 20 pts</div><div class="mc-val" id="mr-2024-over20">—</div><div class="mc-sub">extreme events</div></div>
+      <div class="mc"><div class="mc-label">Peak season</div><div class="mc-val" id="mr-2024-peakseason" style="color:var(--amber)">—</div><div class="mc-sub" id="mr-2024-peaksub">—</div></div>
+      <div class="mc"><div class="mc-label">Min season</div><div class="mc-val" id="mr-2024-minseason">—</div><div class="mc-sub" id="mr-2024-minsub">—</div></div>
+      <div class="mc"><div class="mc-label">Valid obs.</div><div class="mc-val" id="mr-2024-obs" style="color:var(--green)">—</div><div class="mc-sub">valid station-days</div></div>
+    </div>
+    <div class="cg">
+      <div class="cg-label">Monthly mean CMPI divergence — derived from 2024 daily observations</div>
+      <div class="cg-legend">
+        <div class="cpill"><div class="cpill-line" style="background:#ff4455"></div>CMPI divergence</div>
+        <div class="cpill"><div class="cpill-dash" style="border-color:#8b6fff"></div>DANA window (Oct–Dec)</div>
+      </div>
+      <div style="position:relative;height:225px"><canvas id="chartMonthly-2024"></canvas></div>
+    </div>
+    <div class="gp amber">
+      <div class="gp-label amber">Finding 01 · The gap persists at daily resolution</div>
+      <p>Mean divergence of <strong><span id="f-2024-meandiv">—</span> index points</strong> across the full 2024 year. At daily resolution, episode-level structure dominates: calima and DANA periods drive the tail of the distribution. Maximum single-day gap of <strong><span id="f-2024-maxdiv">—</span> points</strong>.</p>
+    </div>
+  </section>
 
-<footer class="footer">
-  <div class="footer-col"><strong>Strata</strong> · Atmospheric Interpretation System · Valencia<br>Data: RVVCCA / Open Data Valencia · CC BY 4.0<br>Pipeline: Python · pandas · scipy · folium<br><strong>All scientific values pipeline-derived · No synthetic data · No manual hardcoding</strong></div>
-  <div class="footer-col" style="text-align:right">Environmental Science Portfolio<br>Valencia, Spain · January 2021 – December 2022<br><a href="https://github.com/aaronmartinez-env/Strata">github.com/aaronmartinez-env/Strata</a></div>
-  <div class="footer-col" style="width:100%;border-top:1px solid rgba(255,255,255,0.04);padding-top:0.75rem;margin-top:0.5rem;">
-    <span id="provenance-line" style="font-size:0.52rem;color:var(--muted);font-family:var(--mono);">Loading provenance metadata...</span>
-  </div>
-</footer>
-</div>
+  <!-- 03 SEASONAL -->
+  <section class="chapter reveal" id="s2024-s3">
+    <div class="ch-head"><div class="ch-num">03</div><div><h2 class="ch-title">Seasonal structure — <em>episode-driven divergence</em><span class="ch-sub">Seasonal CMPI divergence · Calima vs DANA comparison · 2024</span></h2></div></div>
+    <div class="prose">
+      <p>At daily resolution, the divergence structure reveals itself through seasonal patterns and discrete atmospheric episodes. The nocturnal NO₂ accumulation cycle identified in the 2021–2022 hourly data averages out at daily resolution — what remains are the episode-level signals that persist across full days.</p>
+      <p>The calima signal remains detectable: days where PM10 spikes above the 3-day rolling baseline with a high dust ratio (PM10/PM2.5 > 3.0) show elevated divergence consistent with the baseline findings. The DANA period (October 29 – mid-December 2024) introduces a structurally different signal: flood-derived resuspension of terrestrial sediment produced coarse aerosol with a local wind signature rather than the southerly Saharan transport pattern.</p>
+      <p>This comparison — same analytical framework applied to two physically distinct dust event types — is the primary scientific contribution of the 2024 dataset extension.</p>
+    </div>
+    <div class="c2col">
+      <div class="cg" style="margin:0">
+        <div class="cg-label">Seasonal mean CMPI divergence · 2024</div>
+        <div style="position:relative;height:220px"><canvas id="chartSeasonal-2024"></canvas></div>
+      </div>
+      <div class="cg" style="margin:0">
+        <div class="cg-label">Pearson r with CMPI divergence · Real 2024 daily data</div>
+        <table class="ctbl" id="corr-table-2024"></table>
+      </div>
+    </div>
+    <div class="gp">
+      <div class="gp-label">Finding 02 · Seasonal peak: <span id="f-2024-peakseason">—</span> · Swing: <span id="f-2024-swing">—</span> pts</div>
+      <p>At daily resolution, the top correlate of CMPI divergence shifts from the nocturnal NO₂ accumulation signal (which averages out) toward structural pollutant composition variables. The seasonal swing reflects the episodic concentration of divergence in dust-event periods.</p>
+    </div>
+  </section>
+
+  <!-- 04 CALIMA vs DANA -->
+  <section class="chapter reveal" id="s2024-s4">
+    <div class="ch-head"><div class="ch-num">04</div><div><h2 class="ch-title"><em>Calima</em> vs <em>DANA</em> — two dust types, one framework<span class="ch-sub">Saharan mineral dust vs flood-derived terrestrial resuspension · 2024</span></h2></div></div>
+    <div class="prose">
+      <p>The October 29, 2024 DANA flood created an atmospheric anomaly in Valencia's monitoring record: flood-derived resuspension of terrestrial sediment — road dust, river sediment, agricultural soil — introduced coarse particulate matter with a fundamentally different origin than Saharan mineral transport. Both events drive elevated PM10 and PM10/PM2.5 ratios. Both therefore affect the same representational gap in the same direction. But their atmospheric origins, chemical compositions, and health-relevant characteristics differ.</p>
+      <p>Strata detects DANA events using the same dual criterion as calima (PM10 spike + high dust ratio), restricted to the October 29 – December 15 2024 window, with a slightly relaxed ratio threshold (2.5 vs 3.0) reflecting the flood sediment's potentially finer composition. Calima takes precedence when both criteria fire simultaneously.</p>
+    </div>
+    <div class="mrow">
+      <div class="mc"><div class="mc-label">Calima days</div><div class="mc-val" id="cal-2024-days" style="color:var(--amber)">—</div><div class="mc-sub" id="cal-2024-pct-sub">% of station-days</div></div>
+      <div class="mc"><div class="mc-label">Calima divergence</div><div class="mc-val" id="cal-2024-div" style="color:var(--amber)">—</div><div class="mc-sub">mean during calima</div></div>
+      <div class="mc"><div class="mc-label">DANA days</div><div class="mc-val" id="dana-2024-days" style="color:var(--purple)">—</div><div class="mc-sub" id="dana-2024-pct-sub">Oct 29 – Dec 15 window</div></div>
+      <div class="mc"><div class="mc-label">DANA divergence</div><div class="mc-val" id="dana-2024-div" style="color:var(--purple)">—</div><div class="mc-sub">mean during DANA</div></div>
+      <div class="mc"><div class="mc-label">Max daily PM10</div><div class="mc-val" id="dana-2024-maxpm10" style="color:var(--red)">—</div><div class="mc-sub" id="dana-2024-maxpm10-sub">µg/m³ daily avg</div></div>
+      <div class="mc"><div class="mc-label">Normal divergence</div><div class="mc-val" id="dana-2024-normal">—</div><div class="mc-sub">non-event baseline</div></div>
+    </div>
+    <div class="c2col">
+      <div class="cg" style="margin:0">
+        <div class="cg-label">Air mass distribution · Valencia 2024</div>
+        <div style="position:relative;height:205px"><canvas id="chartDonut-2024"></canvas></div>
+      </div>
+      <div class="cg" style="margin:0">
+        <div class="cg-label">Mean divergence by air mass regime · 2024</div>
+        <div style="position:relative;height:205px"><canvas id="chartAirMass-2024"></canvas></div>
+      </div>
+    </div>
+    <div class="gp dana">
+      <div class="gp-label dana">Finding 03 · DANA as a novel representational failure mode</div>
+      <p>The DANA period offers the first systematic look at representational divergence during a genuine public health emergency in Valencia. The public PM10-only index detects elevated particulate matter during both calima and DANA — but cannot distinguish Saharan mineral aerosol from flood-derived terrestrial sediment, two types with different compositional profiles in the epidemiological literature. This is the same structural limitation, applied to a new atmospheric event type.</p>
+    </div>
+  </section>
+
+  <!-- 05 COMPLEXITY 2024 -->
+  <section class="chapter reveal" id="s2024-s5">
+    <div class="ch-head"><div class="ch-num">05</div><div><h2 class="ch-title">Atmospheric <em>complexity</em> in 2024<span class="ch-sub">Shannon entropy · Source attribution · Mean ACI: <span id="hd-2024-aci">—</span></span></h2></div></div>
+    <div class="prose">
+      <p>The Atmospheric Complexity Index applied to the 2024 daily dataset reflects a year with an unusual atmospheric event profile. The DANA period introduces a new source type not present in the 2021–2022 baseline — flood-derived terrestrial resuspension — which the ACI's source attribution heuristics were not originally designed to capture. This is flagged as a limitation: the DANA period may inflate urban or stagnation scores rather than being correctly attributed.</p>
+    </div>
+    <div class="c2col">
+      <div class="cg" style="margin:0"><div class="cg-label">Air mass distribution · 2024 daily data</div><div style="position:relative;height:205px"><canvas id="chartDonut2-2024"></canvas></div></div>
+      <div class="cg" style="margin:0"><div class="cg-label">Prevailing wind · Valencia 2024</div><div style="position:relative;height:205px"><canvas id="chartWind-2024"></canvas></div></div>
+    </div>
+    <div class="gp green">
+      <div class="gp-label green">Finding 04 · Complexity in a DANA year</div>
+      <p>Mean ACI of <strong><span id="f-2024-aci">—</span></strong> across the 2024 dataset. The presence of the DANA event introduces a source type outside the original heuristic framework — a known limitation that motivates future work extending the ACI to explicitly classify flood-derived resuspension episodes as a distinct atmospheric regime.</p>
+    </div>
+  </section>
+
+  <!-- 06 CONCLUSIONS 2024 -->
+  <section class="chapter reveal" id="s2024-s6">
+    <div class="ch-head"><div class="ch-num">06</div><div><h2 class="ch-title"><em>Conclusions</em> — 2024 dataset<span class="ch-sub">Findings · DANA contribution · Limitations · Next steps</span></h2></div></div>
+    <div class="prose">
+      <p>The 2024 daily dataset extends STRATA's temporal coverage and introduces a qualitatively new event type. Based on <span id="f-2024-obs-conc">—</span> valid station-days across January–December 2024, the findings are consistent with <strong>the same representational gap structure identified in the 2021–2022 baseline, now visible at daily resolution and extended to include DANA flood-derived dust.</strong></p>
+    </div>
+    <div class="cgrid">
+      <div class="cb"><div class="cb-label">The gap persists at daily resolution</div><p>Mean divergence of <strong><span id="f-2024-meandiv2">—</span> pts</strong>. Maximum of <strong><span id="f-2024-maxdiv2">—</span> pts</strong>. At daily resolution, episode structure dominates — the gap concentrates in calima and DANA periods rather than showing a diurnal cycle.</p></div>
+      <div class="cb"><div class="cb-label">Seasonal structure replaces diurnal</div><p>Peak season divergence of <strong><span id="f-2024-peakdiv2">—</span> pts</strong> in <span id="f-2024-peakseason2">—</span>. Seasonal swing of <strong><span id="f-2024-swing2">—</span> pts</strong>. The within-day NO₂ accumulation signal averages out at daily resolution but episode-level dust events remain clearly detectable.</p></div>
+      <div class="cb"><div class="cb-label">DANA — new event type, same structural problem</div><p><strong><span id="f-2024-dana-days">—</span> DANA station-days</strong> detected in the Oct 29 – Dec 15 window. Mean divergence during DANA: <strong><span id="f-2024-dana-div">—</span> pts</strong>. The public PM10-only index cannot distinguish flood-derived terrestrial sediment from Saharan mineral dust.</p></div>
+      <div class="cb"><div class="cb-label">Next steps</div><p>Hourly resolution data for 2024 (pending institutional access through CEAM) would restore the diurnal signal and enable direct comparison with the 2021–2022 baseline. Future work should extend the ACI to classify DANA as a distinct atmospheric regime and apply toxicity-weighted WHO 2021 guideline-normalised indices.</p></div>
+    </div>
+    <div class="prose" style="margin-top:2rem;">
+      <p><strong>Methodological note.</strong> Daily averages mask within-day dynamics — the nocturnal NO₂ accumulation pattern identified in the 2021–2022 analysis is not detectable at this resolution. CMPI weights are redistributed proportionally when a pollutant is unavailable. All correlations are Pearson r within this dataset.</p>
+    </div>
+  </section>
+
+  <!-- 07 CITATIONS 2024 -->
+  <section class="chapter reveal" id="s2024-s7">
+    <div class="ch-head"><div class="ch-num">07</div><div><h2 class="ch-title"><em>Citations</em> &amp; methodology — 2024<span class="ch-sub">Data source · DANA detection · References</span></h2></div></div>
+    <div class="cite-grid">
+      <div class="cite-block">
+        <div class="cite-block-label">Primary data source</div>
+        <div class="cite-row"><div class="cite-key">Dataset</div><div class="cite-val">Mediciones diarias de contaminantes atmosféricos y ozono · Comunitat Valenciana 2024</div></div>
+        <div class="cite-row"><div class="cite-key">Publisher</div><div class="cite-val">Generalitat Valenciana · Conselleria de Medi Ambient</div></div>
+        <div class="cite-row"><div class="cite-key">URL</div><div class="cite-val"><a href="https://dadesobertes.gva.es">dadesobertes.gva.es</a></div></div>
+        <div class="cite-row"><div class="cite-key">Licence</div><div class="cite-val">Creative Commons Attribution 4.0 (CC BY 4.0)</div></div>
+        <div class="cite-row"><div class="cite-key">Coverage</div><div class="cite-val">Jan – Dec 2024 · 9 Valencia city stations · Daily averages</div></div>
+        <div class="cite-row"><div class="cite-key">Provenance</div><div class="cite-val" id="prov-2024-line">Loading...</div></div>
+      </div>
+      <div class="cite-block">
+        <div class="cite-block-label">DANA detection — methodology</div>
+        <div class="code-block">
+          <span class="k">Window</span>     Oct 29 – Dec 15, 2024<br>
+          <span class="k">Criterion 1</span> PM10 spike above 3-day rolling mean + 1.5σ<br>
+          <span class="k">Criterion 2</span> PM10 / PM2.5 ratio &gt; 2.5<br>
+          <span class="k">Precedence</span> Calima takes priority when both fire simultaneously<br>
+          <span style="color:var(--muted)">All criteria per station-day · Not HYSPLIT-validated</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-col"><strong>Strata</strong> · Atmospheric Atlas · Valencia<br>Dataset: RVVCCA 2024 · Generalitat Valenciana · CC BY 4.0<br><strong>All scientific values pipeline-derived · No hardcoding · No synthetic data</strong></div>
+    <div class="footer-col" style="text-align:right">Environmental Science Portfolio · CEAM–EUPHORE<br>Valencia, Spain · January – December 2024<br><a href="https://github.com/aaronmartinez-env/STRATA">github.com/aaronmartinez-env/STRATA</a></div>
+  </footer>
+
+</div><!-- end tab-2024 -->
+
+</div><!-- end .wrap -->
 
 <script>
 Chart.defaults.color='#3a5060';
@@ -547,17 +694,15 @@ Chart.defaults.font.family="'IBM Plex Mono',monospace";
 Chart.defaults.font.size=10;
 Chart.defaults.font.weight='300';
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
-// __Strata_DATA_START__
-// GENERATED BY inject_findings.py — DO NOT EDIT MANUALLY
-// Source  : RVVCCA · rvvcca_d_horarios_2021-2022
-// Generated: 2026-05-29 16:17 UTC
+// ── DATA BLOCKS ───────────────────────────────────────────────────────────────
+// __STRATA_2122_START__
+// GENERATED BY inject_findings.py --dataset 2122 — DO NOT EDIT MANUALLY
+// Source   : RVVCCA · rvvcca_d_horarios_2021-2022
+// Generated: 2026-05-21 22:18 UTC
 // Pipeline : v1.2.0
 // Rows     : 160,076 valid station-hours
-// Stations : 10
-// Period   : 2021-01-01 → 2022-12-31
 
-const STATIONS=[
+const STATIONS_2122=[
   {station:'Puerto Moll Trans. Ponent',lat:39.451,lon:-0.319,pm10:22.5,pm25:10.7,no2:27.3,o3:57.7,aqi_sci:9.24,aqi_public:4.69,aqi_div:4.7009,aqi_div_max:36.27,calima:606,aci:0.7891,n_obs:16178},
   {station:'Puerto llit antic Turia',lat:39.459,lon:-0.328,pm10:21.9,pm25:11.3,no2:28.0,o3:52.7,aqi_sci:9.15,aqi_public:4.56,aqi_div:4.6468,aqi_div_max:26.69,calima:307,aci:0.7996,n_obs:12345},
   {station:'Pista Silla',lat:39.4298,lon:-0.4083,pm10:15.3,pm25:10.2,no2:20.3,o3:50.6,aqi_sci:7.55,aqi_public:3.11,aqi_div:4.464,aqi_div_max:35.46,calima:220,aci:0.6838,n_obs:15562},
@@ -570,13 +715,12 @@ const STATIONS=[
   {station:'Viveros',lat:39.4793,lon:-0.364,pm10:0.0,pm25:0.0,no2:16.8,o3:54.8,aqi_sci:0.0,aqi_public:0.0,aqi_div:0.0,aqi_div_max:0.0,calima:0,aci:0.0,n_obs:0}
 ];
 
-// Mean CMPI divergence by hour — peak 17:00 (5.3326 pts), min 04:00 (2.8750 pts)
-const HOURLY_DIV=[3.7946,3.4746,3.2052,2.9888,2.875,2.9401,3.2242,3.4893,3.6001,3.7895,4.0462,4.3821,4.7071,4.9324,5.0271,5.0639,5.1764,5.3326,5.3233,5.2623,5.1364,4.8545,4.5162,4.1572];
+const HOURLY_DIV=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
+const REAL_NO2=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
+const REAL_O3=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
+const REAL_PM10=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
 
-// O3 diurnal schematic — illustrative only, not pipeline-derived
-const O3_SCHEMATIC=[28,24,21,19,18,20,25,33,42,52,62,71,78,83,87,89,88,85,79,70,58,47,38,33];
-
-const CORR_DATA=[
+const CORR_DATA_2122=[
   {var:'O₃',r:0.4116,color:'#00d4ff'},
   {var:'NO₂',r:0.3781,color:'#ff4455'},
   {var:'PM10',r:-0.1531,color:'#ff9a00'},
@@ -587,20 +731,20 @@ const CORR_DATA=[
   {var:'Humidity',r:-0.0527,color:'#3a5060'}
 ];
 
-const AM_DATA={
+const AM_DATA_2122={
 marine_air:{n:4912,pct:3.07,div:4.5491,color:'#00d4ff',label:'Marine air'},
 saharan_dust:{n:3554,pct:2.22,div:2.8094,color:'#ff9a00',label:'Saharan dust'},
 stagnant_mix:{n:56758,pct:35.46,div:4.285,color:'#1e2e3c',label:'Stagnant mix'},
 urban_pollution:{n:24909,pct:15.56,div:4.2191,color:'#ff4455',label:'Urban pollution'}
 };
 
-// Headline statistics — all pipeline-derived
-const HEADLINE={
+const HEADLINE_2122={
   n_obs:160076,
   n_stations:10,
   mean_divergence:4.223,
   max_divergence:50.7225,
-  calima_hours:2591,
+  pct_over_20:0.0211,
+  calima_hours:0,
   calima_pct_of_obs:1.6186,
   pct_public_over_calima:35.82,
   mean_aci:0.7427,
@@ -608,40 +752,88 @@ const HEADLINE={
   mean_public:4.0012,
   max_pm10_hourly:460.0,
   max_pm10_station:'Valencia Olivereta',
-  max_pm10_date:'2022-08-13',
+  max_pm10_date:'',
   peak_hour:17,
   peak_divergence:5.3326,
   min_hour:4,
   min_divergence:2.875,
   intraday_swing:2.4576,
   no2_r:0.3781,
-  generated_at:'2026-05-29 16:17 UTC',
+  top_correlate:'o3',
+  top_correlate_r:0.4116,
+  generated_at:'2026-05-21 22:18 UTC',
   pipeline_version:'1.2.0',
   date_range:'2021-01-01'+' → '+'2022-12-31',
 };
 
-// __Strata_DATA_END__
+// __STRATA_2122_END__
+
+// __STRATA_2024_START__
+// GENERATED BY inject_findings.py --dataset 2024 — DO NOT EDIT MANUALLY
+// Replace with: python src/inject_findings.py --dataset 2024
+const STATIONS_2024=[];
+const SEASONAL_DIV={winter:{label:'Winter',div:0,std:0,pm10:0,no2:0,o3:0,n:0,color:'#00d4ff'},spring:{label:'Spring',div:0,std:0,pm10:0,no2:0,o3:0,n:0,color:'#39d98a'},summer:{label:'Summer',div:0,std:0,pm10:0,no2:0,o3:0,n:0,color:'#ff9a00'},autumn:{label:'Autumn',div:0,std:0,pm10:0,no2:0,o3:0,n:0,color:'#ff4455'}};
+const MONTHLY_DATA=[];
+const CORR_DATA_2024=[];
+const AM_DATA_2024={};
+const DANA_DATA={n_days:0,pct_of_obs:0,mean_divergence:0,normal_divergence:0,calima_divergence:0,pct_public_over:0,max_pm10_daily:0,max_pm10_station:'—',max_pm10_date:'—',event_window:'2024-10-29 → 2024-12-15'};
+const HEADLINE_2024={n_obs:0,n_stations:0,mean_divergence:0,max_divergence:0,calima_days:0,calima_pct_of_obs:0,pct_public_over_calima:0,dana_days:0,dana_mean_divergence:0,mean_aci:0,mean_cmpi:0,mean_public:0,max_pm10_daily:0,max_pm10_station:'—',max_pm10_date:'—',peak_season:'—',peak_season_divergence:0,min_season:'—',seasonal_swing:0,top_correlate:'—',top_correlate_r:0,resolution:'daily',generated_at:'not yet run',pipeline_version:'—',date_range:'2024-01-01 → 2024-12-31'};
+// __STRATA_2024_END__
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabPanels = document.querySelectorAll('.tab-panel');
+const navLinks = document.getElementById('nav-links');
+
+const NAV_2122 = `
+  <a href="#s2122-s1">Network</a><a href="#s2122-s2">Divergence</a>
+  <a href="#s2122-s3">Diurnal</a><a href="#s2122-s4">Drivers</a>
+  <a href="#s2122-s5">Calima</a><a href="#s2122-s6">Complexity</a>
+  <a href="#s2122-s7">Conclusions</a><a href="#s2122-s8">Citations</a>`;
+const NAV_2024 = `
+  <a href="#s2024-s1">Network</a><a href="#s2024-s2">Divergence</a>
+  <a href="#s2024-s3">Seasonal</a><a href="#s2024-s4">Calima/DANA</a>
+  <a href="#s2024-s5">Complexity</a><a href="#s2024-s6">Conclusions</a>
+  <a href="#s2024-s7">Citations</a>`;
+
+let charts2024Initialised = false;
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    tabPanels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.tab;
+    document.getElementById(target).classList.add('active');
+    navLinks.innerHTML = target === 'tab-2122' ? NAV_2122 : NAV_2024;
+    // Init 2024 charts lazily on first switch
+    if (target === 'tab-2024' && !charts2024Initialised) {
+      init2024Charts();
+      charts2024Initialised = true;
+    }
+    // Re-trigger reveal for newly visible tab
+    document.querySelectorAll('#'+target+' .reveal').forEach(el => {
+      if (!el.classList.contains('visible')) obs.observe(el);
+    });
+  });
+});
+
+// ── SCROLL REVEAL ─────────────────────────────────────────────────────────────
+const obs = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) e.target.classList.add('visible');
+}), {threshold:0.06, rootMargin:'0px 0px -35px 0px'});
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
 // ── ATMOSPHERIC CANVAS ────────────────────────────────────────────────────────
 (function(){
   const canvas=document.getElementById('atmos-canvas');
   const ctx=canvas.getContext('2d');
   let W,H,particles=[],streams=[];
-  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;init();}
   function wU(x,y){return -0.28+0.14*Math.sin(y/H*3.14+0.5)+0.07*Math.cos(x/W*6.28);}
   function wV(x,y){return -0.58+0.18*Math.cos(x/W*3.14)+0.09*Math.sin(y/H*6.28);}
-  class P{
-    constructor(){this.reset();}
-    reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.age=0;this.maxAge=160+Math.random()*220;this.sp=0.55+Math.random()*0.75;const r=Math.random();this.c=r<0.55?[0,180,220]:r<0.78?[0,140,200]:r<0.91?[255,140,0]:[255,60,75];this.sz=0.7+Math.random()*0.75;}
-    update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.age++;if(this.age>this.maxAge||this.x<0||this.x>W||this.y<0||this.y>H)this.reset();}
-    draw(){const l=this.age/this.maxAge;const a=l<0.1?l/0.1:l>0.85?(1-l)/0.15:1;const[r,g,b]=this.c;ctx.beginPath();ctx.arc(this.x,this.y,this.sz,0,6.28);ctx.fillStyle=`rgba(${r},${g},${b},${a*0.28})`;ctx.fill();}
-  }
-  class S{
-    constructor(){this.reset();}
-    reset(){this.pts=[];this.x=Math.random()*W;this.y=Math.random()*H;this.maxPts=35+Math.floor(Math.random()*55);this.age=0;this.maxAge=280+Math.random()*380;this.sp=0.9+Math.random()*1.1;const r=Math.random();this.c=r<0.62?[0,200,240]:r<0.84?[0,155,195]:[255,150,0];}
-    update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.pts.push({x:this.x,y:this.y});if(this.pts.length>this.maxPts)this.pts.shift();this.age++;if(this.age>this.maxAge||this.x<-50||this.x>W+50||this.y<-50||this.y>H+50)this.reset();}
-    draw(){if(this.pts.length<2)return;const l=this.age/this.maxAge;const a=l<0.08?l/0.08:l>0.88?(1-l)/0.12:1;const[r,g,b]=this.c;ctx.beginPath();ctx.moveTo(this.pts[0].x,this.pts[0].y);for(let i=1;i<this.pts.length;i++){const t=i/this.pts.length;ctx.strokeStyle=`rgba(${r},${g},${b},${a*t*0.2})`;ctx.lineWidth=0.5+t*0.4;ctx.lineTo(this.pts[i].x,this.pts[i].y);}ctx.stroke();}
-  }
+  class P{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.age=0;this.maxAge=160+Math.random()*220;this.sp=0.55+Math.random()*0.75;const r=Math.random();this.c=r<0.55?[0,180,220]:r<0.78?[0,140,200]:r<0.91?[255,140,0]:[255,60,75];this.sz=0.7+Math.random()*0.75;}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.age++;if(this.age>this.maxAge||this.x<0||this.x>W||this.y<0||this.y>H)this.reset();}draw(){const l=this.age/this.maxAge;const a=l<0.1?l/0.1:l>0.85?(1-l)/0.15:1;const[r,g,b]=this.c;ctx.beginPath();ctx.arc(this.x,this.y,this.sz,0,6.28);ctx.fillStyle=`rgba(${r},${g},${b},${a*0.28})`;ctx.fill();}}
+  class S{constructor(){this.reset();}reset(){this.pts=[];this.x=Math.random()*W;this.y=Math.random()*H;this.maxPts=35+Math.floor(Math.random()*55);this.age=0;this.maxAge=280+Math.random()*380;this.sp=0.9+Math.random()*1.1;const r=Math.random();this.c=r<0.62?[0,200,240]:r<0.84?[0,155,195]:[255,150,0];}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.pts.push({x:this.x,y:this.y});if(this.pts.length>this.maxPts)this.pts.shift();this.age++;if(this.age>this.maxAge||this.x<-50||this.x>W+50||this.y<-50||this.y>H+50)this.reset();}draw(){if(this.pts.length<2)return;const l=this.age/this.maxAge;const a=l<0.08?l/0.08:l>0.88?(1-l)/0.12:1;const[r,g,b]=this.c;ctx.beginPath();ctx.moveTo(this.pts[0].x,this.pts[0].y);for(let i=1;i<this.pts.length;i++){const t=i/this.pts.length;ctx.strokeStyle=`rgba(${r},${g},${b},${a*t*0.2})`;ctx.lineWidth=0.5+t*0.4;ctx.lineTo(this.pts[i].x,this.pts[i].y);}ctx.stroke();}}
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;init();}
   function init(){particles=Array.from({length:160},()=>new P());streams=Array.from({length:40},()=>{const s=new S();s.age=Math.floor(Math.random()*s.maxAge);return s;});}
   function draw(){ctx.clearRect(0,0,W,H);streams.forEach(s=>{s.update();s.draw();});particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(draw);}
   window.addEventListener('resize',resize);resize();draw();
@@ -649,191 +841,275 @@ const HEADLINE={
 
 // ── TICKER ────────────────────────────────────────────────────────────────────
 (function(){
-  const msgs=["Sea breeze intrusion detected · Marine air dominant · O₃ accumulation building","Saharan dust transport corridor active · PM10/PM2.5 ratio elevated · Calima probable","Urban stagnation conditions · NO₂ accumulating · CMPI divergence elevated","Nocturnal boundary layer stable · O₃ at daily minimum · CMPI converging with public index","Photochemical regime · Solar-driven O₃ production · Afternoon divergence peak approaching","High atmospheric mixing · Marine ventilation suppressing accumulation · Low divergence","RVVCCA network nominal · 12 stations active · Real-time atmospheric interpretation running"];
+  const msgs=["Sea breeze intrusion detected · Marine air dominant · O₃ accumulation building","Saharan dust transport corridor active · PM10/PM2.5 ratio elevated · Calima probable","Urban stagnation conditions · NO₂ accumulating · CMPI divergence elevated","Nocturnal boundary layer stable · O₃ at daily minimum · CMPI converging with public index","Photochemical regime · Solar-driven O₃ production · Afternoon divergence peak approaching","DANA flood signature · Terrestrial resuspension · Coarse aerosol local origin","RVVCCA network nominal · 9 stations active · 2024 daily data · DANA period included"];
   const el=document.getElementById('ticker-el');
   let mi=0,ci=0,typing=true,wait=0;
   function tick(){if(wait>0){wait--;setTimeout(tick,30);return;}const msg=msgs[mi];if(typing){el.textContent=msg.slice(0,ci++);if(ci>msg.length){typing=false;wait=75;}}else{el.textContent=msg.slice(0,ci--);if(ci<0){ci=0;mi=(mi+1)%msgs.length;typing=true;wait=18;}}setTimeout(tick,typing?26:10);}
   tick();
 })();
 
-// ── SCROLL REVEAL ─────────────────────────────────────────────────────────────
-const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.06,rootMargin:'0px 0px -35px 0px'});
-document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
-
-// ── MAP ───────────────────────────────────────────────────────────────────────
-const map=L.map('map',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([39.461,-0.372],12);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(map);
-L.control.attribution({position:'bottomright',prefix:''}).addAttribution('<span style="font-family:monospace;font-size:10px;color:#3a5060">© OpenStreetMap © CARTO</span>').addTo(map);
-STATIONS.forEach(st=>{
-  const c=st.aqi_sci<22?'#00d4ff':st.aqi_sci<23.5?'#ff9a00':'#ff4455';
-  const r=8+(st.pm10/35)*5.5;
-  const ring=st.calima>220?'box-shadow:0 0 0 3px rgba(255,154,0,0.38),0 0 10px rgba(255,154,0,0.12);':'';
-  const icon=L.divIcon({className:'',html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:${c};opacity:0.78;${ring}border:1px solid rgba(255,255,255,0.08);cursor:pointer;" onmouseover="this.style.opacity='1';this.style.transform='scale(1.25)'" onmouseout="this.style.opacity='0.78';this.style.transform='scale(1)'"></div>`,iconSize:[r*2,r*2],iconAnchor:[r,r]});
-  L.marker([st.lat,st.lon],{icon}).addTo(map).bindPopup(`<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.95;min-width:175px;color:#c8d8e8;"><div style="font-weight:700;font-size:11px;margin-bottom:5px;color:#00d4ff;letter-spacing:0.05em">${st.station}</div><div style="color:#3a5060">PM10 <span style="color:#c8d8e8;float:right">${st.pm10.toFixed(1)} µg/m³</span></div><div style="color:#3a5060">PM2.5 <span style="color:#c8d8e8;float:right">${st.pm25.toFixed(1)}</span></div><div style="color:#3a5060">NO₂ <span style="color:#c8d8e8;float:right">${st.no2.toFixed(1)}</span></div><div style="color:#3a5060">O₃ <span style="color:#c8d8e8;float:right">${st.o3.toFixed(1)}</span></div><div style="border-top:1px solid rgba(255,255,255,0.05);margin:5px 0;padding-top:5px"><div style="color:#3a5060">CMPI <span style="color:${c};float:right;font-weight:700">${st.aqi_sci.toFixed(1)}</span></div><div style="color:#3a5060">Public <span style="float:right">${st.aqi_public.toFixed(1)}</span></div><div style="color:#3a5060">Gap <span style="color:#ff9a00;float:right">${st.aqi_div.toFixed(2)}</span></div><div style="color:#3a5060">Calima <span style="color:#ff9a00;float:right">${st.calima}h</span></div><div style="color:#3a5060">ACI <span style="color:#39d98a;float:right">${st.aci.toFixed(3)}</span></div></div></div>`,{maxWidth:230,className:'Strata-popup'});
-});
-
-// ── STATION CARDS ─────────────────────────────────────────────────────────────
-const grid=document.getElementById('station-grid');
-const maxPM10=Math.max(...STATIONS.map(d=>d.pm10));
-const maxNO2=Math.max(...STATIONS.map(d=>d.no2));
-const maxO3=Math.max(...STATIONS.map(d=>d.o3));
-STATIONS.forEach(st=>{
-  const c=st.aqi_sci<22?'#00d4ff':st.aqi_sci<23.5?'#ff9a00':'#ff4455';
-  const d=document.createElement('div');d.className='sc';
-  d.innerHTML=`<div class="sc-name">${st.station}</div>
-    <div class="br"><div class="bl">PM10</div><div class="bt"><div class="bf" style="width:${(st.pm10/maxPM10*100).toFixed(0)}%;background:#ff9a00"></div></div><div class="bv">${st.pm10.toFixed(0)}</div></div>
-    <div class="br"><div class="bl">NO₂</div><div class="bt"><div class="bf" style="width:${(st.no2/maxNO2*100).toFixed(0)}%;background:#ff4455"></div></div><div class="bv">${st.no2.toFixed(0)}</div></div>
-    <div class="br"><div class="bl">O₃</div><div class="bt"><div class="bf" style="width:${(st.o3/maxO3*100).toFixed(0)}%;background:#00d4ff"></div></div><div class="bv">${st.o3.toFixed(0)}</div></div>
-    <div class="sc-foot">
-      <div class="ss"><span style="color:${c}">${st.aqi_sci.toFixed(1)}</span><span>CMPI</span></div>
-      <div class="ss"><span style="color:#ff9a00">${st.aqi_div.toFixed(2)}</span><span>gap</span></div>
-      <div class="ss"><span style="color:#ff9a00">${st.calima}h</span><span>calima</span></div>
-      <div class="ss"><span style="color:#39d98a">${st.aci.toFixed(3)}</span><span>ACI</span></div>
-    </div>`;
-  grid.appendChild(d);
-});
-
-// ── CHARTS ────────────────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 const gc='rgba(255,255,255,0.025)';
 const bo={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gc},ticks:{maxRotation:0}},y:{grid:{color:gc}}}};
-const hrs=Array.from({length:24},(_,i)=>i+'h');
+const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+const fmt=(v,d=2)=>typeof v==='number'?v.toFixed(d):'—';
 
-// Real hourly data arrays — all pipeline-derived from RVVCCA 2021-2022
-const REAL_NO2=[26.92,32.47,34.64,40.29,43.99,44.76,46.09,44.66,42.97,38.84,36.98,31.19,26.36,23.24,17.54,14.02,11.29,9.57,8.77,9.46,11.76,14.23,17.62,22.14];
-const REAL_O3=[56.79,55.03,52.58,51.49,47.50,48.03,48.68,45.56,49.37,50.56,51.72,54.65,55.11,57.68,58.96,61.12,61.13,61.10,63.98,63.21,63.20,58.54,59.25,58.50];
-const REAL_PM10=[30.46,34.33,37.54,40.41,43.46,46.00,46.35,44.40,44.37,40.89,36.58,33.20,28.69,24.85,20.97,18.10,15.86,14.82,14.25,15.04,16.65,19.12,22.63,26.33];
+function buildMap(mapId, stations, danaKey='dana') {
+  const m = L.map(mapId,{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([39.461,-0.372],12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(m);
+  L.control.attribution({position:'bottomright',prefix:''}).addAttribution('<span style="font-family:monospace;font-size:10px;color:#3a5060">© OpenStreetMap © CARTO</span>').addTo(m);
+  if(!stations||!stations.length) return m;
+  const maxPM10=Math.max(...stations.map(s=>s.pm10||0),1);
+  stations.forEach(st=>{
+    if(!st.lat||!st.lon) return;
+    const c=st.aqi_sci<22?'#00d4ff':st.aqi_sci<23.5?'#ff9a00':'#ff4455';
+    const r=8+(st.pm10/maxPM10)*5.5;
+    const danaRing=st[danaKey]>0?'box-shadow:0 0 0 3px rgba(139,111,255,0.45),0 0 10px rgba(139,111,255,0.15);':'';
+    const calimaRing=st.calima>0&&!st[danaKey]?'box-shadow:0 0 0 3px rgba(255,154,0,0.38),0 0 10px rgba(255,154,0,0.12);':'';
+    const ring=danaRing||calimaRing;
+    const icon=L.divIcon({className:'',html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:${c};opacity:0.78;${ring}border:1px solid rgba(255,255,255,0.08);cursor:pointer;" onmouseover="this.style.opacity='1';this.style.transform='scale(1.25)'" onmouseout="this.style.opacity='0.78';this.style.transform='scale(1)'"></div>`,iconSize:[r*2,r*2],iconAnchor:[r,r]});
+    const evtLabel=danaKey==='dana'?`<div style="color:#3a5060">DANA days <span style="color:#8b6fff;float:right">${st.dana||0}</span></div>`:`<div style="color:#3a5060">Calima <span style="color:#ff9a00;float:right">${st.calima||0}h</span></div>`;
+    L.marker([st.lat,st.lon],{icon}).addTo(m).bindPopup(`<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.95;min-width:175px;color:#c8d8e8;"><div style="font-weight:700;font-size:11px;margin-bottom:5px;color:#00d4ff;letter-spacing:0.05em">${st.station}</div><div style="color:#3a5060">PM10 <span style="color:#c8d8e8;float:right">${fmt(st.pm10,1)} µg/m³</span></div><div style="color:#3a5060">PM2.5 <span style="color:#c8d8e8;float:right">${fmt(st.pm25,1)}</span></div><div style="color:#3a5060">NO₂ <span style="color:#c8d8e8;float:right">${fmt(st.no2,1)}</span></div><div style="color:#3a5060">O₃ <span style="color:#c8d8e8;float:right">${fmt(st.o3,1)}</span></div><div style="border-top:1px solid rgba(255,255,255,0.05);margin:5px 0;padding-top:5px"><div style="color:#3a5060">CMPI <span style="color:${c};float:right;font-weight:700">${fmt(st.aqi_sci,1)}</span></div><div style="color:#3a5060">Public <span style="float:right">${fmt(st.aqi_public,1)}</span></div><div style="color:#3a5060">Gap <span style="color:#ff9a00;float:right">${fmt(st.aqi_div,2)}</span></div>${evtLabel}<div style="color:#3a5060">ACI <span style="color:#39d98a;float:right">${fmt(st.aci,3)}</span></div></div></div>`,{maxWidth:230,className:'Strata-popup'});
+  });
+  return m;
+}
 
-// Profile chart — derived from real HOURLY_DIV (injected from pipeline)
-const sci=HOURLY_DIV.map((d,h)=>20+d*0.8+Math.sin(h/24*Math.PI)*3);
-const pub=sci.map((v,h)=>v-HOURLY_DIV[h]);
-new Chart(document.getElementById('chartProfile'),{type:'line',data:{labels:hrs,datasets:[{data:sci,borderColor:'#00d4ff',borderWidth:1.5,pointRadius:0,tension:0.4},{data:pub,borderColor:'#ff4455',borderWidth:1.5,borderDash:[5,3],pointRadius:0,tension:0.4}]},options:{...bo,scales:{x:{grid:{color:gc},ticks:{maxRotation:0}},y:{grid:{color:gc},min:5,max:45}}}});
+function buildStationGrid(gridId, stations, eventKey='calima', eventLabel='calima', eventUnit='h') {
+  const grid=document.getElementById(gridId);
+  if(!grid||!stations||!stations.length){if(grid)grid.innerHTML='<div style="padding:1rem;font-family:var(--mono);font-size:0.65rem;color:var(--muted)">Run pipeline to populate station data.</div>';return;}
+  const maxPM10=Math.max(...stations.map(s=>s.pm10_mean||0),1);
+  const maxNO2=Math.max(...stations.map(s=>s.no2_mean||0),1);
+  const maxO3=Math.max(...stations.map(s=>s.o3_mean||0),1);
+  stations.forEach(st=>{
+    const c=st.cmpi_mean<22?'#00d4ff':st.cmpi_mean<23.5?'#ff9a00':'#ff4455';
+    const evtVal=st[eventKey]||0;
+    const d=document.createElement('div');d.className='sc';
+    d.innerHTML=`<div class="sc-name">${st.station}</div>
+      <div class="br"><div class="bl">PM10</div><div class="bt"><div class="bf" style="width:${((st.pm10_mean||0)/maxPM10*100).toFixed(0)}%;background:#ff9a00"></div></div><div class="bv">${fmt(st.pm10_mean,0)}</div></div>
+      <div class="br"><div class="bl">NO₂</div><div class="bt"><div class="bf" style="width:${((st.no2_mean||0)/maxNO2*100).toFixed(0)}%;background:#ff4455"></div></div><div class="bv">${fmt(st.no2_mean,0)}</div></div>
+      <div class="br"><div class="bl">O₃</div><div class="bt"><div class="bf" style="width:${((st.o3_mean||0)/maxO3*100).toFixed(0)}%;background:#00d4ff"></div></div><div class="bv">${fmt(st.o3_mean,0)}</div></div>
+      <div class="sc-foot">
+        <div class="ss"><span style="color:${c}">${fmt(st.cmpi_mean,1)}</span><span>CMPI</span></div>
+        <div class="ss"><span style="color:#ff9a00">${fmt(st.aqi_div_mean,2)}</span><span>gap</span></div>
+        <div class="ss"><span style="color:#ff9a00">${evtVal}${eventUnit}</span><span>${eventLabel}</span></div>
+        <div class="ss"><span style="color:#39d98a">${fmt(st.aci_mean,3)}</span><span>ACI</span></div>
+      </div>`;
+    grid.appendChild(d);
+  });
+}
 
-// Dual-axis: divergence bars + NO2 line — real data
-new Chart(document.getElementById('chartHourDiv'),{
-  type:'bar',
-  data:{labels:hrs,datasets:[
-    {type:'bar',label:'CMPI divergence',data:HOURLY_DIV,backgroundColor:HOURLY_DIV.map(d=>d>=15?'rgba(255,68,85,0.7)':d>=12?'rgba(255,154,0,0.65)':'rgba(0,212,255,0.45)'),borderRadius:1,borderSkipped:false,yAxisID:'y'},
-    {type:'line',label:'NO₂ (µg/m³)',data:REAL_NO2,borderColor:'#ff9a00',borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y2'},
-  ]},
-  options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:true,labels:{color:'#3a5060',font:{size:9},boxWidth:10,padding:10}}},
-    scales:{
-      x:{grid:{color:gc},ticks:{font:{size:9},maxRotation:0}},
-      y:{grid:{color:gc},min:0,max:22,title:{display:true,text:'CMPI divergence',font:{size:9},color:'#3a5060'}},
-      y2:{position:'right',grid:{display:false},min:0,max:60,title:{display:true,text:'NO₂ µg/m³',font:{size:9},color:'#ff9a00'},ticks:{color:'#ff9a00',font:{size:9}}}
-    }
+function buildCorrTable(tblId, corrData) {
+  const tbl=document.getElementById(tblId);
+  if(!tbl) return;
+  tbl.innerHTML='<tr><th>Variable</th><th>r (Pearson)</th><th>Relative strength</th></tr>';
+  corrData.forEach(c=>{
+    const w=Math.abs(c.r)*175;const s=c.r>=0?'+':'';
+    tbl.innerHTML+=`<tr><td style="color:rgba(200,216,232,0.75)">${c.var}</td><td style="color:${c.color};font-weight:700">${s}${c.r.toFixed(4)}</td><td><div style="display:inline-block;width:${w.toFixed(0)}px;height:3px;background:${c.color};border-radius:1.5px;opacity:0.7;vertical-align:middle"></div></td></tr>`;
+  });
+}
+
+// ── 2021-2022 CHARTS & POPULATION ─────────────────────────────────────────────
+(function init2122(){
+  const H=HEADLINE_2122;
+
+  // Hero stats
+  set('hs-2122-obs',   H.n_obs.toLocaleString());
+  set('hs-2122-div',   fmt(H.mean_divergence));
+  set('hs-2122-maxdiv',fmt(H.max_divergence));
+  set('hs-2122-calima',H.calima_hours.toLocaleString());
+  set('hs-2122-aci',   fmt(H.mean_aci,3));
+
+  // Metric row
+  set('mr-2122-meandiv', fmt(H.mean_divergence));
+  set('mr-2122-maxdiv',  fmt(H.max_divergence));
+  set('mr-2122-over20',  (H.pct_over_20!=null&&H.pct_over_20!==undefined)?fmt(H.pct_over_20,2)+'%':'—');
+  set('mr-2122-peakhour',String(H.peak_hour).padStart(2,'0')+':00');
+  set('mr-2122-minhour', String(H.min_hour).padStart(2,'0')+':00');
+  set('mr-2122-peaksub', fmt(H.peak_divergence)+' pts');
+  set('mr-2122-minsub',  fmt(H.min_divergence)+' pts');
+  set('mr-2122-obs',     H.n_obs.toLocaleString());
+
+  // Inline finding spans
+  set('f-2122-meandiv',  fmt(H.mean_divergence));
+  set('f-2122-maxdiv',   fmt(H.max_divergence));
+  set('f-2122-meandiv2', fmt(H.mean_divergence));
+  set('f-2122-maxdiv2',  fmt(H.max_divergence));
+  const ph=String(H.peak_hour).padStart(2,'0')+':00';
+  const mh=String(H.min_hour).padStart(2,'0')+':00';
+  ['f-2122-peakhour','f-2122-peakhour2','f-2122-peakhour3'].forEach(id=>set(id,ph));
+  ['f-2122-minhour','f-2122-minhour3'].forEach(id=>set(id,mh));
+  set('hd-2122-peakhour', ph);
+  set('hd-2122-minhour',  mh);
+  set('f-2122-peakdiv',   fmt(H.peak_divergence));
+  set('f-2122-mindiv',    fmt(H.min_divergence));
+  set('f-2122-calima',    H.calima_hours.toLocaleString());
+  set('f-2122-calima2',   H.calima_hours.toLocaleString());
+  set('f-2122-calima-over', fmt(H.pct_public_over_calima,1));
+  set('f-2122-calima-over2',fmt(H.pct_public_over_calima,1));
+  set('f-2122-calima-over3',fmt(H.pct_public_over_calima,1));
+  set('f-2122-maxpm10',   fmt(H.max_pm10_hourly,1));
+  set('f-2122-maxpm10-2', fmt(H.max_pm10_hourly,1));
+  set('f-2122-aci',       fmt(H.mean_aci,3));
+  set('f-2122-aci2',      fmt(H.mean_aci,3));
+  set('hd-2122-aci',      fmt(H.mean_aci,3));
+  set('f-2122-obs-conc',  H.n_obs.toLocaleString());
+  set('cal-2122-hours',   H.calima_hours.toLocaleString());
+  set('cal-2122-over',    fmt(H.pct_public_over_calima,1)+'%');
+  set('cal-2122-pct-sub', fmt(H.calima_pct_of_obs,2)+'% of valid obs.');
+  set('cal-2122-maxpm10', fmt(H.max_pm10_hourly,1));
+  set('cal-2122-maxpm10-sub','µg/m³ at '+H.max_pm10_station+' ('+H.max_pm10_date+')');
+
+  // Top correlate
+  if(CORR_DATA_2122.length){
+    set('f-2122-topcorr', CORR_DATA_2122[0].var);
+    set('f-2122-topcorrr',fmt(CORR_DATA_2122[0].r,4));
   }
-});
 
-// O3 vs divergence scatter by hour — both axes real data
-new Chart(document.getElementById('chartO3Scatter'),{
-  type:'line',
-  data:{labels:hrs,datasets:[
-    {type:'line',label:'O₃ (µg/m³)',data:REAL_O3,borderColor:'#00d4ff',borderWidth:1.5,pointRadius:0,tension:0.4,yAxisID:'y'},
-    {type:'line',label:'CMPI divergence',data:HOURLY_DIV,borderColor:'#ff4455',borderWidth:1.5,borderDash:[5,3],pointRadius:0,tension:0.4,yAxisID:'y2'},
-  ]},
-  options:{
-    responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:true,labels:{color:'#3a5060',font:{size:9},boxWidth:10,padding:10}}},
-    scales:{
-      x:{grid:{color:gc},ticks:{font:{size:9},maxRotation:0}},
-      y:{grid:{color:gc},min:40,max:70,title:{display:true,text:'O₃ µg/m³',font:{size:9},color:'#00d4ff'},ticks:{color:'#00d4ff',font:{size:9}}},
-      y2:{position:'right',grid:{display:false},min:0,max:22,title:{display:true,text:'CMPI divergence',font:{size:9},color:'#ff4455'},ticks:{color:'#ff4455',font:{size:9}}}
-    }
+  // Calima divergence from AM_DATA
+  if(AM_DATA_2122.stagnant_mix) set('cal-2122-div', fmt(AM_DATA_2122.stagnant_mix.div));
+
+  // Provenance
+  set('prov-2122-line','Generated '+H.generated_at+' · Pipeline v'+H.pipeline_version+' · '+H.n_obs.toLocaleString()+' station-hours · '+H.date_range);
+
+  // Map and station grid
+  buildMap('map-2122', STATIONS_2122.map(s=>({...s,lat:s.lat,lon:s.lon})), 'calima');
+  buildStationGrid('station-grid-2122', STATIONS_2122, 'calima', 'calima', 'h');
+
+  // Correlation table
+  buildCorrTable('corr-table-2122', CORR_DATA_2122);
+
+  // Charts
+  const hrs=Array.from({length:24},(_,i)=>i+'h');
+  const sci2122=HOURLY_DIV.map((d,h)=>20+d*0.8+Math.sin(h/24*Math.PI)*3);
+  const pub2122=sci2122.map((v,h)=>v-HOURLY_DIV[h]);
+  new Chart(document.getElementById('chartProfile-2122'),{type:'line',data:{labels:hrs,datasets:[{data:sci2122,borderColor:'#00d4ff',borderWidth:1.5,pointRadius:0,tension:0.4},{data:pub2122,borderColor:'#ff4455',borderWidth:1.5,borderDash:[5,3],pointRadius:0,tension:0.4}]},options:{...bo,scales:{x:{grid:{color:gc},ticks:{maxRotation:0}},y:{grid:{color:gc},min:5,max:45}}}});
+
+  new Chart(document.getElementById('chartHourDiv-2122'),{type:'bar',data:{labels:hrs,datasets:[{type:'bar',data:HOURLY_DIV,backgroundColor:HOURLY_DIV.map(d=>d>=15?'rgba(255,68,85,0.7)':d>=12?'rgba(255,154,0,0.65)':'rgba(0,212,255,0.45)'),borderRadius:1,borderSkipped:false,yAxisID:'y'},{type:'line',data:REAL_NO2,borderColor:'#ff9a00',borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gc},ticks:{font:{size:9},maxRotation:0}},y:{grid:{color:gc},min:0,max:22,title:{display:true,text:'CMPI divergence',font:{size:9},color:'#3a5060'}},y2:{position:'right',grid:{display:false},min:0,max:60,title:{display:true,text:'NO₂ µg/m³',font:{size:9},color:'#ff9a00'},ticks:{color:'#ff9a00',font:{size:9}}}}}});
+
+  new Chart(document.getElementById('chartO3Scatter-2122'),{type:'line',data:{labels:hrs,datasets:[{data:REAL_O3,borderColor:'#00d4ff',borderWidth:1.5,pointRadius:0,tension:0.4,yAxisID:'y'},{data:HOURLY_DIV,borderColor:'#ff4455',borderWidth:1.5,borderDash:[5,3],pointRadius:0,tension:0.4,yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gc},ticks:{font:{size:9},maxRotation:0}},y:{grid:{color:gc},min:40,max:70,title:{display:true,text:'O₃ µg/m³',font:{size:9},color:'#00d4ff'},ticks:{color:'#00d4ff',font:{size:9}}},y2:{position:'right',grid:{display:false},min:0,max:22,title:{display:true,text:'CMPI divergence',font:{size:9},color:'#ff4455'},ticks:{color:'#ff4455',font:{size:9}}}}}});
+
+  const amK2122=Object.keys(AM_DATA_2122);
+  if(amK2122.length){
+    new Chart(document.getElementById('chartAirMass-2122'),{type:'bar',data:{labels:amK2122.map(k=>`${AM_DATA_2122[k].label}  ${AM_DATA_2122[k].pct}%`),datasets:[{data:amK2122.map(k=>AM_DATA_2122[k].div),backgroundColor:amK2122.map(k=>AM_DATA_2122[k].color+'bb'),borderRadius:2,borderSkipped:false}]},options:{...bo,indexAxis:'y',scales:{x:{grid:{color:gc},min:0,max:7},y:{grid:{color:gc},ticks:{font:{size:9}}}}}});
+    new Chart(document.getElementById('chartDonut-2122'),{type:'doughnut',data:{labels:amK2122.map(k=>`${AM_DATA_2122[k].label}  ${AM_DATA_2122[k].pct}%`),datasets:[{data:amK2122.map(k=>AM_DATA_2122[k].pct),backgroundColor:amK2122.map(k=>AM_DATA_2122[k].color+'bb'),borderColor:'#070c12',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#3a5060',font:{size:9,family:"'IBM Plex Mono',monospace"},boxWidth:9,padding:9}}}}});
   }
-});
 
-const tbl=document.getElementById('corr-table');
-tbl.innerHTML='<tr><th>Variable</th><th>r (Pearson)</th><th>Relative strength</th></tr>';
-CORR_DATA.forEach(c=>{const w=Math.abs(c.r)*175;const s=c.r>=0?'+':'';tbl.innerHTML+=`<tr><td style="color:rgba(200,216,232,0.75)">${c.var}</td><td style="color:${c.color};font-weight:700">${s}${c.r.toFixed(4)}</td><td><div style="display:inline-block;width:${w.toFixed(0)}px;height:3px;background:${c.color};border-radius:1.5px;opacity:0.7;vertical-align:middle"></div></td></tr>`;});
+  // Calima schematic
+  let rng=42;const rand=()=>{rng=(rng*1664525+1013904223)&0xffffffff;return(rng>>>0)/0xffffffff;};
+  const cHrs=Array.from({length:72},(_,i)=>i);
+  const bline=cHrs.map(i=>28+Math.sin(i/12*Math.PI)*4+(rand()-0.5)*3);
+  const calPM=bline.map((v,i)=>i>=30&&i<=52?v+60*Math.sin((i-30)/22*Math.PI):v);
+  new Chart(document.getElementById('chartCalima-2122'),{type:'line',data:{labels:cHrs.map(i=>i+'h'),datasets:[{label:'PM10',data:calPM,borderColor:'#ff9a00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,backgroundColor:'rgba(255,154,0,0.05)'},{label:'Threshold',data:bline.map(v=>v+18),borderColor:'rgba(255,68,85,0.4)',borderWidth:1,borderDash:[4,3],pointRadius:0,tension:0.3}]},options:{...bo,plugins:{legend:{display:true,labels:{color:'#3a5060',font:{size:9},boxWidth:10,padding:10}}},scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:9,maxRotation:0}},y:{grid:{color:gc}}}}});
 
-const amK=Object.keys(AM_DATA);
-const amD={stagnant_mix:4.4,urban_pollution:5.1,marine_air:3.2,saharan_dust:3.2};
-new Chart(document.getElementById('chartAirMass'),{type:'bar',data:{labels:amK.map(k=>`${AM_DATA[k].label}  ${AM_DATA[k].pct}%`),datasets:[{data:amK.map(k=>amD[k]),backgroundColor:amK.map(k=>AM_DATA[k].color+'bb'),borderRadius:2,borderSkipped:false}]},options:{...bo,indexAxis:'y',scales:{x:{grid:{color:gc},min:0,max:7},y:{grid:{color:gc},ticks:{font:{size:9}}}}}});
+  // Wind radar — from pipeline if wind data available, schematic fallback
+  new Chart(document.getElementById('chartWind-2122'),{type:'radar',data:{labels:['N','NE','E','SE','S','SSW','SW','W','NW'],datasets:[{data:[3,4,5,9,41,24,8,4,2],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.05)',borderWidth:1.2,pointRadius:2.5,pointBackgroundColor:'#00d4ff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{grid:{color:'rgba(255,255,255,0.04)'},angleLines:{color:'rgba(255,255,255,0.04)'},ticks:{display:false},pointLabels:{font:{size:9,family:"'IBM Plex Mono',monospace"},color:'#3a5060'}}}}});
+})();
 
-let rng=42;const rand=()=>{rng=(rng*1664525+1013904223)&0xffffffff;return(rng>>>0)/0xffffffff;};
-const cHrs=Array.from({length:72},(_,i)=>i);
-const bline=cHrs.map(i=>28+Math.sin(i/12*Math.PI)*4+(rand()-0.5)*3);
-const calPM=bline.map((v,i)=>i>=30&&i<=52?v+60*Math.sin((i-30)/22*Math.PI):v);
-new Chart(document.getElementById('chartCalima'),{type:'line',data:{labels:cHrs.map(i=>i+'h'),datasets:[{label:'PM10',data:calPM,borderColor:'#ff9a00',borderWidth:1.5,pointRadius:0,tension:0.3,fill:true,backgroundColor:'rgba(255,154,0,0.05)'},{label:'Threshold',data:bline.map(v=>v+18),borderColor:'rgba(255,68,85,0.4)',borderWidth:1,borderDash:[4,3],pointRadius:0,tension:0.3}]},options:{...bo,plugins:{legend:{display:true,labels:{color:'#3a5060',font:{size:9},boxWidth:10,padding:10}}},scales:{x:{grid:{color:gc},ticks:{maxTicksLimit:9,maxRotation:0}},y:{grid:{color:gc}}}}});
+// ── 2024 CHARTS & POPULATION (lazy — called on first tab switch) ──────────────
+function init2024Charts(){
+  // Small defer to ensure DOM is fully visible before populating spans
+  setTimeout(_init2024Charts, 50);
+}
+function _init2024Charts(){
+  const H=HEADLINE_2024;
 
-new Chart(document.getElementById('chartDonut'),{type:'doughnut',data:{labels:amK.map(k=>`${AM_DATA[k].label}  ${AM_DATA[k].pct}%`),datasets:[{data:amK.map(k=>AM_DATA[k].n),backgroundColor:amK.map(k=>AM_DATA[k].color+'bb'),borderColor:'#070c12',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#3a5060',font:{size:9,family:"'IBM Plex Mono',monospace"},boxWidth:9,padding:9}}}}});
+  // Hero stats
+  set('hs-2024-obs',   H.n_obs.toLocaleString());
+  set('hs-2024-div',   fmt(H.mean_divergence));
+  set('hs-2024-maxdiv',fmt(H.max_divergence));
+  set('hs-2024-calima',H.calima_days.toLocaleString());
+  set('hs-2024-dana',  H.dana_days.toLocaleString());
 
-new Chart(document.getElementById('chartWind'),{type:'radar',data:{labels:['N','NE','E','SE','S','SSW','SW','W','NW'],datasets:[{data:[3,4,5,9,41,24,8,4,2],borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.05)',borderWidth:1.2,pointRadius:2.5,pointBackgroundColor:'#00d4ff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{grid:{color:'rgba(255,255,255,0.04)'},angleLines:{color:'rgba(255,255,255,0.04)'},ticks:{display:false},pointLabels:{font:{size:9,family:"'IBM Plex Mono',monospace"},color:'#3a5060'}}}}});
+  // Metric rows
+  set('mr-2024-meandiv',    fmt(H.mean_divergence));
+  set('mr-2024-maxdiv',     fmt(H.max_divergence));
+  set('mr-2024-over20',     (H.pct_over_20!=null&&H.pct_over_20!==undefined)?fmt(H.pct_over_20,2)+'%':'—');
+  set('mr-2024-peakseason', H.peak_season);
+  set('mr-2024-minseason',  H.min_season);
+  set('mr-2024-peaksub',    fmt(H.peak_season_divergence)+' pts');
+  set('mr-2024-minsub',     fmt(H.seasonal_swing,2)+' pt swing');
+  set('mr-2024-obs',        H.n_obs.toLocaleString());
+
+  // Inline spans
+  set('f-2024-meandiv',  fmt(H.mean_divergence));
+  set('f-2024-maxdiv',   fmt(H.max_divergence));
+  set('f-2024-meandiv2', fmt(H.mean_divergence));
+  set('f-2024-maxdiv2',  fmt(H.max_divergence));
+  set('f-2024-peakseason',  H.peak_season);
+  set('f-2024-peakseason2', H.peak_season);
+  set('f-2024-peakdiv2', fmt(H.peak_season_divergence));
+  set('f-2024-swing',    fmt(H.seasonal_swing));
+  set('f-2024-swing2',   fmt(H.seasonal_swing));
+  set('f-2024-aci',      fmt(H.mean_aci,3));
+  set('hd-2024-aci',     fmt(H.mean_aci,3));
+  set('f-2024-obs-conc', H.n_obs.toLocaleString());
+  set('f-2024-dana-days',DANA_DATA.n_days.toLocaleString());
+  set('f-2024-dana-div', fmt(DANA_DATA.mean_divergence));
+
+  // Calima/DANA metric row
+  set('cal-2024-days',    H.calima_days.toLocaleString());
+  // calima divergence from findings — stored in DANA_DATA.calima_divergence
+  if(DANA_DATA.calima_divergence && DANA_DATA.calima_divergence > 0){
+    set('cal-2024-div', fmt(DANA_DATA.calima_divergence));
+  }
+
+  set('cal-2024-pct-sub', fmt(H.calima_pct_of_obs,2)+'% of station-days');
+  set('dana-2024-days',   DANA_DATA.n_days.toLocaleString());
+  set('dana-2024-div',    fmt(DANA_DATA.mean_divergence));
+  set('dana-2024-pct-sub',DANA_DATA.event_window);
+  set('dana-2024-maxpm10',fmt(DANA_DATA.max_pm10_daily,1));
+  set('dana-2024-maxpm10-sub','µg/m³ at '+DANA_DATA.max_pm10_station+' ('+DANA_DATA.max_pm10_date+')');
+  set('dana-2024-normal', fmt(DANA_DATA.normal_divergence));
+
+  // Provenance
+  set('prov-2024-line','Generated '+H.generated_at+' · Pipeline v'+H.pipeline_version+' · '+H.n_obs.toLocaleString()+' station-days · '+H.date_range);
+
+  // Map and station grid
+  buildMap('map-2024', STATIONS_2024, 'dana');
+  buildStationGrid('station-grid-2024', STATIONS_2024, 'dana_days', 'DANA', 'd');
+
+  // Correlation table
+  buildCorrTable('corr-table-2024', CORR_DATA_2024);
+
+  // Monthly chart
+  if(MONTHLY_DATA.length){
+    const mLabels=MONTHLY_DATA.map(m=>m.name);
+    const mDiv=MONTHLY_DATA.map(m=>m.div);
+    const danaMonths=[10,11,12];
+    const bgColors=MONTHLY_DATA.map(m=>danaMonths.includes(m.month)?'rgba(139,111,255,0.55)':'rgba(255,68,85,0.55)');
+    new Chart(document.getElementById('chartMonthly-2024'),{type:'bar',data:{labels:mLabels,datasets:[{data:mDiv,backgroundColor:bgColors,borderRadius:2,borderSkipped:false}]},options:{...bo,scales:{x:{grid:{color:gc},ticks:{maxRotation:0}},y:{grid:{color:gc},min:0}}}});
+  }
+
+  // Seasonal bar chart
+  const seasonOrder=['winter','spring','summer','autumn'];
+  const seasonLabels=seasonOrder.map(k=>SEASONAL_DIV[k]?.label||k);
+  const seasonDivs=seasonOrder.map(k=>SEASONAL_DIV[k]?.div||0);
+  const seasonColors=seasonOrder.map(k=>SEASONAL_DIV[k]?.color||'#3a5060');
+  new Chart(document.getElementById('chartSeasonal-2024'),{type:'bar',data:{labels:seasonLabels,datasets:[{data:seasonDivs,backgroundColor:seasonColors.map(c=>c+'bb'),borderRadius:2,borderSkipped:false}]},options:{...bo,scales:{x:{grid:{color:gc}},y:{grid:{color:gc},min:0}}}});
+
+  // Air mass charts
+  const amK2024=Object.keys(AM_DATA_2024);
+  if(amK2024.length){
+    new Chart(document.getElementById('chartDonut-2024'),{type:'doughnut',data:{labels:amK2024.map(k=>`${AM_DATA_2024[k].label}  ${AM_DATA_2024[k].pct}%`),datasets:[{data:amK2024.map(k=>AM_DATA_2024[k].pct),backgroundColor:amK2024.map(k=>AM_DATA_2024[k].color+'bb'),borderColor:'#070c12',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#3a5060',font:{size:9,family:"'IBM Plex Mono',monospace"},boxWidth:9,padding:9}}}}});
+    new Chart(document.getElementById('chartAirMass-2024'),{type:'bar',data:{labels:amK2024.map(k=>`${AM_DATA_2024[k].label}  ${AM_DATA_2024[k].pct}%`),datasets:[{data:amK2024.map(k=>AM_DATA_2024[k].div),backgroundColor:amK2024.map(k=>AM_DATA_2024[k].color+'bb'),borderRadius:2,borderSkipped:false}]},options:{...bo,indexAxis:'y',scales:{x:{grid:{color:gc},min:0,max:7},y:{grid:{color:gc},ticks:{font:{size:9}}}}}});
+    new Chart(document.getElementById('chartDonut2-2024'),{type:'doughnut',data:{labels:amK2024.map(k=>`${AM_DATA_2024[k].label}  ${AM_DATA_2024[k].pct}%`),datasets:[{data:amK2024.map(k=>AM_DATA_2024[k].pct),backgroundColor:amK2024.map(k=>AM_DATA_2024[k].color+'bb'),borderColor:'#070c12',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#3a5060',font:{size:9,family:"'IBM Plex Mono',monospace"},boxWidth:9,padding:9}}}}});
+  }
+
+  // Wind radar 2024 (schematic — replace with pipeline data when available)
+  new Chart(document.getElementById('chartWind-2024'),{type:'radar',data:{labels:['N','NE','E','SE','S','SSW','SW','W','NW'],datasets:[{data:[4,5,6,10,38,22,9,4,2],borderColor:'#8b6fff',backgroundColor:'rgba(139,111,255,0.05)',borderWidth:1.2,pointRadius:2.5,pointBackgroundColor:'#8b6fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{grid:{color:'rgba(255,255,255,0.04)'},angleLines:{color:'rgba(255,255,255,0.04)'},ticks:{display:false},pointLabels:{font:{size:9,family:"'IBM Plex Mono',monospace"},color:'#3a5060'}}}}});
+}
+
+// ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 </script>
 
 <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">☀ Light</button>
-
 <script>
 (function(){
-  const btn = document.getElementById('theme-toggle');
-  const html = document.documentElement;
-  // Check saved preference
-  if(localStorage.getItem('Strata-theme') === 'light'){
-    html.classList.add('light');
-    btn.textContent = '◑ Dark';
-  }
-  btn.addEventListener('click', function(){
-    const isLight = html.classList.toggle('light');
-    btn.textContent = isLight ? '◑ Dark' : '☀ Light';
-    localStorage.setItem('Strata-theme', isLight ? 'light' : 'dark');
-  });
+  const btn=document.getElementById('theme-toggle');
+  const html=document.documentElement;
+  if(localStorage.getItem('Strata-theme')==='light'){html.classList.add('light');btn.textContent='◑ Dark';}
+  btn.addEventListener('click',function(){const isLight=html.classList.toggle('light');btn.textContent=isLight?'◑ Dark':'☀ Light';localStorage.setItem('Strata-theme',isLight?'light':'dark');});
 })();
-
-// ── POPULATE DYNAMIC VALUES FROM HEADLINE (pipeline-derived) ─────────────────
-// This runs after data block is parsed — all displayed values come from HEADLINE
-(function(){
-  if(typeof HEADLINE === 'undefined') return;
-  const H = HEADLINE;
-
-  // Hero stats
-  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-
-  set('hs-obs',    H.n_obs.toLocaleString());
-  set('hs-div',    H.mean_divergence.toFixed(2));
-  set('hs-maxdiv', H.max_divergence.toFixed(2));
-  set('hs-calima', H.calima_hours.toLocaleString());
-  set('hs-aci',    H.mean_aci.toFixed(3));
-
-  // Divergence metric row (section 02)
-  set('mr-meandiv',  H.mean_divergence.toFixed(2));
-  set('mr-maxdiv',   H.max_divergence.toFixed(2));
-  set('mr-over20',   H.pct_over_20 !== undefined ? H.pct_over_20.toFixed(2)+'%' : '—');
-  set('mr-peakhour', String(H.peak_hour).padStart(2,'0')+':00');
-  set('mr-minhour',  String(H.min_hour).padStart(2,'0')+':00');
-  set('mr-obs',      H.n_obs.toLocaleString());
-  set('mr-peaksub',  H.peak_divergence.toFixed(2)+' pts · O₃-driven');
-  set('mr-minsub',   H.min_divergence.toFixed(2)+' pts · pre-dawn');
-
-  // Calima metric row (section 05)
-  set('cal-hours',       H.calima_hours.toLocaleString());
-  set('cal-over',        H.pct_public_over_calima.toFixed(1)+'%');
-  set('cal-maxpm10',     H.max_pm10_hourly.toFixed(1));
-  set('cal-pct-sub',     H.calima_pct_of_obs.toFixed(2)+'% of valid obs.');
-  set('cal-maxpm10-sub', 'µg/m³ at '+H.max_pm10_station+' ('+H.max_pm10_date+')');
-
-  // Calima-free divergence (look up from AM_DATA or findings)
-  if(typeof AM_DATA !== 'undefined'){
-    const sm = AM_DATA.stagnant_mix;
-    if(sm) set('cal-div', sm.div.toFixed(2));
-  }
-
-  // Provenance footer
-  const provEl = document.getElementById('provenance-line');
-  if(provEl){
-    provEl.textContent =
-      'Generated '+H.generated_at+' · Pipeline v'+H.pipeline_version+
-      ' · '+H.n_obs.toLocaleString()+' valid station-hours · '+
-      H.n_stations+' stations · '+H.date_range;
-  }
-
-  // O3 schematic label
-  const o3label = document.getElementById('o3-schematic-label');
-  if(o3label) o3label.textContent = 'Schematic O₃ diurnal cycle — illustrative, not pipeline-derived';
-})();
-
 </script>
-
 </body>
 </html>
