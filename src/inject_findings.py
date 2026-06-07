@@ -114,7 +114,18 @@ def build_2122_block(findings: dict) -> str:
     s    = findings["summary"]
     prov = findings["provenance"]
     c    = findings.get("calima", {})
+    # Normalise calima field names — aeris_findings uses n_hours, newer uses n_days
+    if "n_hours" in c and "n_days" not in c:
+        c = dict(c)
+        c["n_days"] = c.get("n_hours", 0)
+        c["n_obs"]  = c.get("n_hours", 0)
+    if "pct_of_valid_obs" not in c and "pct_of_valid_hours" in c:
+        c = dict(c); c["pct_of_valid_obs"] = c["pct_of_valid_hours"]
     pm   = findings.get("pm10_stats", {})
+    # Normalise pm10_stats — aeris uses max_datetime, newer uses max_date
+    if "max_datetime" in pm and "max_date" not in pm:
+        pm = dict(pm)
+        pm["max_date"] = str(pm["max_datetime"])[:10]
     diur = findings.get("diurnal", {})
     stations = findings.get("stations", [])
     corr     = findings.get("correlations", {})
@@ -137,33 +148,63 @@ def build_2122_block(findings: dict) -> str:
         name = st.get("station","")
         lat  = _f(st.get("latitude") or _coord(name,"lat"), 4)
         lon  = _f(st.get("longitude") or _coord(name,"lon"), 4)
+        cal_val = int(st.get('calima_hours', st.get('calima_days', 0)))
         st_rows.append(
             f"  {{station:{name!r},lat:{lat},lon:{lon},"
             f"pm10:{_f(st.get('pm10_mean',0),1)},pm25:{_f(st.get('pm25_mean',0),1)},"
             f"no2:{_f(st.get('no2_mean',0),1)},o3:{_f(st.get('o3_mean',0),1)},"
             f"aqi_sci:{_f(st.get('cmpi_mean',0),2)},aqi_public:{_f(st.get('public_mean',0),2)},"
             f"aqi_div:{_f(st.get('aqi_div_mean',0),4)},aqi_div_max:{_f(st.get('aqi_div_max',0),2)},"
-            f"calima:{int(st.get('calima_hours',st.get('calima_days',0)))},"
+            f"calima:{cal_val},"
             f"aci:{_f(st.get('aci_mean',0),4)},n_obs:{int(st.get('n_obs',0))}}}"
         )
     lines += ["const STATIONS_2122=[", ",\n".join(st_rows), "];", ""]
 
     # HOURLY_DIV — 24 values of mean divergence by hour
-    hourly = diur.get("hours", [])
-    if hourly:
-        hd_map = {r.get("hour",r.get("hora",i)): r.get("aqi_divergence",0) for i,r in enumerate(hourly)}
-        hd_arr = [_f(hd_map.get(h,0),4) for h in range(24)]
+    # aeris_findings uses diurnal.divergence_array (list of 24 floats)
+    # or diurnal.hourly (dict keyed by hour string)
+    div_array = diur.get("divergence_array", [])
+    hourly_dict = diur.get("hourly", {})
+    hours_list  = diur.get("hours", [])
+
+    if div_array and len(div_array) == 24:
+        hd_arr = [_f(v, 4) for v in div_array]
+    elif hourly_dict:
+        hd_arr = [_f(hourly_dict.get(str(h), hourly_dict.get(h, 0)), 4) for h in range(24)]
+    elif hours_list:
+        hd_map = {r.get("hour", r.get("hora", i)): r.get("aqi_divergence", 0)
+                  for i, r in enumerate(hours_list)}
+        hd_arr = [_f(hd_map.get(h, 0), 4) for h in range(24)]
     else:
-        hd_arr = [0.0]*24
+        hd_arr = [0.0] * 24
     lines.append(f"const HOURLY_DIV=[{','.join(str(v) for v in hd_arr)}];")
 
-    # REAL_NO2, REAL_O3, REAL_PM10 — hourly mean pollutant arrays from diurnal findings
+    # REAL_NO2, REAL_O3, REAL_PM10
+    # aeris_findings stores per-pollutant hourly arrays inside diurnal.hourly
+    # as nested dicts: {"no2": {0: val, 1: val, ...}, ...}
+    # or as flat lists in diurnal.no2_array etc.
     for col, jsname in [("no2","REAL_NO2"),("o3","REAL_O3"),("pm10","REAL_PM10")]:
-        if hourly:
-            col_map = {r.get("hour",r.get("hora",i)): r.get(col,0) for i,r in enumerate(hourly)}
-            arr = [_f(col_map.get(h,0),2) for h in range(24)]
+        col_data = diur.get(f"{col}_array", diur.get(col, None))
+        if isinstance(col_data, list) and len(col_data) == 24:
+            # Dedicated array for this pollutant
+            arr = [_f(v, 2) for v in col_data]
+        elif isinstance(hourly_dict, list) and len(hourly_dict) > 0:
+            # aeris_findings: hourly is a list of dicts [{hour:0, no2:16.2, o3:51.4, ...}, ...]
+            hmap = {r.get("hour", i): r.get(col, 0) for i, r in enumerate(hourly_dict)}
+            arr = [_f(hmap.get(h, 0), 2) for h in range(24)]
+        elif isinstance(hourly_dict, dict) and len(hourly_dict) > 0:
+            # hourly is a dict keyed by hour string/int
+            arr = [_f(hourly_dict.get(str(h), hourly_dict.get(h, {})).get(col, 0)
+                      if isinstance(hourly_dict.get(str(h), hourly_dict.get(h, {})), dict)
+                      else 0, 2) for h in range(24)]
+        elif isinstance(col_data, dict):
+            arr = [_f(col_data.get(str(h), col_data.get(h, 0)), 2) for h in range(24)]
+        elif hours_list:
+            col_map = {r.get("hour", r.get("hora", i)): r.get(col, 0)
+                       for i, r in enumerate(hours_list)}
+            arr = [_f(col_map.get(h, 0), 2) for h in range(24)]
         else:
-            arr = [0.0]*24
+            arr = [0.0] * 24
         lines.append(f"const {jsname}=[{','.join(str(v) for v in arr)}];")
     lines.append("")
 
@@ -203,15 +244,15 @@ def build_2122_block(findings: dict) -> str:
         f"  mean_divergence:{_f(s.get('mean_divergence',0),4)},",
         f"  max_divergence:{_f(s.get('max_divergence',0),4)},",
         f"  pct_over_20:{_f(s.get('pct_over_20',0),4)},",
-        f"  calima_hours:{c.get('n_obs',c.get('n_days',0))},",
-        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',0),4)},",
+        f"  calima_hours:{c.get('n_hours',c.get('n_obs',c.get('n_days',0)))},",
+        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',c.get('pct_of_valid_hours',0)),4)},",
         f"  pct_public_over_calima:{_f(c.get('pct_public_over',0),2)},",
         f"  mean_aci:{_f(s.get('mean_aci',0),4)},",
         f"  mean_cmpi:{_f(s.get('mean_cmpi',0),4)},",
         f"  mean_public:{_f(s.get('mean_public',0),4)},",
         f"  max_pm10_hourly:{_f(pm.get('max_hourly',pm.get('max_daily',0)),2)},",
         f"  max_pm10_station:{pm.get('max_station','unknown')!r},",
-        f"  max_pm10_date:{pm.get('max_date','')!r},",
+        f"  max_pm10_date:{pm.get('max_date',str(pm.get('max_datetime',''))[:10])!r},",
         f"  peak_hour:{int(peak_hour)},",
         f"  peak_divergence:{_f(peak_div,4)},",
         f"  min_hour:{int(min_hour)},",
@@ -344,7 +385,7 @@ def build_2024_block(findings: dict) -> str:
         f"  max_divergence:{_f(s.get('max_divergence',0),4)},",
         f"  pct_over_20:{_f(s.get('pct_over_20',0),4)},",
         f"  calima_days:{c.get('n_days',0)},",
-        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',0),4)},",
+        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',c.get('pct_of_valid_hours',0)),4)},",
         f"  pct_public_over_calima:{_f(c.get('pct_public_over',0),2)},",
         f"  dana_days:{dan.get('n_days',0)},",
         f"  dana_mean_divergence:{_f(dan.get('mean_divergence',0),4)},",
@@ -353,7 +394,7 @@ def build_2024_block(findings: dict) -> str:
         f"  mean_public:{_f(s.get('mean_public',0),4)},",
         f"  max_pm10_daily:{_f(pm.get('max_daily',0),2)},",
         f"  max_pm10_station:{pm.get('max_station','unknown')!r},",
-        f"  max_pm10_date:{pm.get('max_date','')!r},",
+        f"  max_pm10_date:{pm.get('max_date',str(pm.get('max_datetime',''))[:10])!r},",
         f"  days_exceeding_who:{pm.get('days_exceeding_who',0)},",
         f"  peak_season:{sea.get('peak_season','—')!r},",
         f"  peak_season_divergence:{_f(sea.get('peak_divergence',0),4)},",
