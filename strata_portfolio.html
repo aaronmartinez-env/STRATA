@@ -968,22 +968,31 @@ function buildMap(mapId, stations, danaKey='dana') {
 function buildStationGrid(gridId, stations, eventKey='calima', eventLabel='calima', eventUnit='h') {
   const grid=document.getElementById(gridId);
   if(!grid||!stations||!stations.length){if(grid)grid.innerHTML='<div style="padding:1rem;font-family:var(--mono);font-size:0.65rem;color:var(--muted)">Run pipeline to populate station data.</div>';return;}
-  const maxPM10=Math.max(...stations.map(s=>s.pm10_mean||0),1);
-  const maxNO2=Math.max(...stations.map(s=>s.no2_mean||0),1);
-  const maxO3=Math.max(...stations.map(s=>s.o3_mean||0),1);
+  // Support both long names (pm10_mean) and short names (pm10) from inject
+  const gpm10=s=>s.pm10_mean!=null?s.pm10_mean:s.pm10||0;
+  const gpm25=s=>s.pm25_mean!=null?s.pm25_mean:s.pm25||0;
+  const gno2=s=>s.no2_mean!=null?s.no2_mean:s.no2||0;
+  const go3=s=>s.o3_mean!=null?s.o3_mean:s.o3||0;
+  const gcmpi=s=>s.cmpi_mean!=null?s.cmpi_mean:s.aqi_sci||0;
+  const gdiv=s=>s.aqi_div_mean!=null?s.aqi_div_mean:s.aqi_div||0;
+  const gaci=s=>s.aci_mean!=null?s.aci_mean:s.aci||0;
+  const maxPM10=Math.max(...stations.map(s=>gpm10(s)),1);
+  const maxNO2=Math.max(...stations.map(s=>gno2(s)),1);
+  const maxO3=Math.max(...stations.map(s=>go3(s)),1);
   stations.forEach(st=>{
-    const c=st.cmpi_mean<22?'#00d4ff':st.cmpi_mean<23.5?'#ff9a00':'#ff4455';
+    const cmpi=gcmpi(st);
+    const c=cmpi<22?'#00d4ff':cmpi<23.5?'#ff9a00':'#ff4455';
     const evtVal=st[eventKey]||0;
     const d=document.createElement('div');d.className='sc';
     d.innerHTML=`<div class="sc-name">${st.station}</div>
-      <div class="br"><div class="bl">PM10</div><div class="bt"><div class="bf" style="width:${((st.pm10_mean||0)/maxPM10*100).toFixed(0)}%;background:#ff9a00"></div></div><div class="bv">${fmt(st.pm10_mean,0)}</div></div>
-      <div class="br"><div class="bl">NO₂</div><div class="bt"><div class="bf" style="width:${((st.no2_mean||0)/maxNO2*100).toFixed(0)}%;background:#ff4455"></div></div><div class="bv">${fmt(st.no2_mean,0)}</div></div>
-      <div class="br"><div class="bl">O₃</div><div class="bt"><div class="bf" style="width:${((st.o3_mean||0)/maxO3*100).toFixed(0)}%;background:#00d4ff"></div></div><div class="bv">${fmt(st.o3_mean,0)}</div></div>
+      <div class="br"><div class="bl">PM10</div><div class="bt"><div class="bf" style="width:${(gpm10(st)/maxPM10*100).toFixed(0)}%;background:#ff9a00"></div></div><div class="bv">${fmt(gpm10(st),0)}</div></div>
+      <div class="br"><div class="bl">NO₂</div><div class="bt"><div class="bf" style="width:${(gno2(st)/maxNO2*100).toFixed(0)}%;background:#ff4455"></div></div><div class="bv">${fmt(gno2(st),0)}</div></div>
+      <div class="br"><div class="bl">O₃</div><div class="bt"><div class="bf" style="width:${(go3(st)/maxO3*100).toFixed(0)}%;background:#00d4ff"></div></div><div class="bv">${fmt(go3(st),0)}</div></div>
       <div class="sc-foot">
-        <div class="ss"><span style="color:${c}">${fmt(st.cmpi_mean,1)}</span><span>CMPI</span></div>
-        <div class="ss"><span style="color:#ff9a00">${fmt(st.aqi_div_mean,2)}</span><span>gap</span></div>
+        <div class="ss"><span style="color:${c}">${fmt(cmpi,1)}</span><span>CMPI</span></div>
+        <div class="ss"><span style="color:#ff9a00">${fmt(gdiv(st),2)}</span><span>gap</span></div>
         <div class="ss"><span style="color:#ff9a00">${evtVal}${eventUnit}</span><span>${eventLabel}</span></div>
-        <div class="ss"><span style="color:#39d98a">${fmt(st.aci_mean,3)}</span><span>ACI</span></div>
+        <div class="ss"><span style="color:#39d98a">${fmt(gaci(st),3)}</span><span>ACI</span></div>
       </div>`;
     grid.appendChild(d);
   });

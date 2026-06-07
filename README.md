@@ -6,7 +6,7 @@
 [![Data: CC BY 4.0](https://img.shields.io/badge/Data-CC%20BY%204.0-lightgrey.svg)](https://opendata.vlci.valencia.es)
 [![Pipeline: Python 3.12](https://img.shields.io/badge/Python-3.12-green.svg)](https://python.org)
 
-🌐 **Live portfolio:** [aaronmartinez-env.github.io/Strata/Strata_portfolio.html](https://aaronmartinez-env.github.io/Strata/Strata_portfolio.html)
+🌐 **Live portfolio:** [aaronmartinez-env.github.io/Strata/strata_portfolio.html](https://aaronmartinez-env.github.io/STRATA/strata_portfolio.html)
 
 ---
 
@@ -99,9 +99,9 @@ Strata/
 ├── outputs/
 │   ├── figures/               # PNG charts
 │   ├── maps/                  # Folium HTML maps
-│   └── reports/               # Strata_findings.json · Strata_report.txt
+│   └── reports/               # strata_findings.json · Strata_report.txt
 ├── notebooks/                 # Jupyter exploration notebooks
-├── Strata_portfolio.html       # Interactive portfolio — open in any browser
+├── strata_portfolio.html       # Interactive portfolio — open in any browser
 ├── requirements.txt
 └── README.md
 ```
@@ -126,7 +126,7 @@ This executes 9 sequential steps:
 6. **Source attribution** — probabilistic scoring across four source types
 7. **Compute ACI** — Shannon entropy over attribution scores
 8. **Generate outputs** — maps, charts, interpolated fields, reports
-9. **Deep analysis + inject** — exports `Strata_findings.json` and updates `Strata_portfolio.html`
+9. **Deep analysis + inject** — exports `strata_findings.json` and updates `strata_portfolio.html`
 
 Additional flags:
 
@@ -214,17 +214,17 @@ Shannon entropy applied to four rule-based source attribution scores, normalised
 
 ## Reproducibility
 
-Every scientific value displayed in `Strata_portfolio.html` is derived from the RVVCCA dataset through the pipeline. The data flow is strictly enforced:
+Every scientific value displayed in `strata_portfolio.html` is derived from the RVVCCA dataset through the pipeline. The data flow is strictly enforced:
 
 ```
 data/raw/air_quality_real.csv
   → src/analysis.py
-  → outputs/reports/Strata_findings.json
+  → outputs/reports/strata_findings.json
   → src/inject_findings.py
-  → Strata_portfolio.html
+  → strata_portfolio.html
 ```
 
-No scientific values are manually hardcoded in the frontend. The data block in `Strata_portfolio.html` is stamped with a pipeline generation timestamp on every run.
+No scientific values are manually hardcoded in the frontend. The data block in `strata_portfolio.html` is stamped with a pipeline generation timestamp on every run.
 
 ---
 
