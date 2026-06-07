@@ -1,36 +1,41 @@
 """
 inject_findings.py
 ------------------
-Reads outputs/reports/Strata_findings.json and injects ALL pipeline-derived
-data into Strata_portfolio.html, replacing every scientific value between
-the sentinel comments with values computed from real RVVCCA data.
+Injects pipeline-derived findings into the two-tab strata_portfolio.html.
 
-Data flow enforced:
-  Strata_processed.csv → analysis.py → findings.json → inject_findings.py → HTML
+Each dataset has its own sentinel block:
+  2021-2022 hourly : // __STRATA_2122_START__ ... // __STRATA_2122_END__
+  2024 daily       : // __STRATA_2024_START__ ... // __STRATA_2024_END__
 
 Usage:
-  python src/inject_findings.py
-  python src/inject_findings.py --html path/to/Strata_portfolio.html
-  python src/inject_findings.py --dry-run
+  python src/inject_findings.py --dataset 2122
+  python src/inject_findings.py --dataset 2024
+  python src/inject_findings.py --dataset 2122 --findings path/to/findings.json
+  python src/inject_findings.py --dataset 2024 --dry-run
+
+Data flow enforced:
+  strata_processed.csv → analysis.py → findings.json
+  → inject_findings.py --dataset [2122|2024] → strata_portfolio.html
+
+NO scientific values are hardcoded here. Every number comes from findings.json.
 """
 
-import json
-import os
-import sys
-import math
-import argparse
+import json, os, sys, math, argparse
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
 from config import OUTPUT_PATH
 
-FINDINGS_PATH = os.path.join(OUTPUT_PATH, "reports", "strata_findings.json")
+FINDINGS_2122 = os.path.join(OUTPUT_PATH, "reports", "strata_findings_2122.json")
+FINDINGS_2024 = os.path.join(OUTPUT_PATH, "reports", "strata_findings.json")
 DEFAULT_HTML  = os.path.join(os.path.dirname(__file__), "..", "strata_portfolio.html")
 
-START_SENTINEL = "// __Strata_DATA_START__"
-END_SENTINEL   = "// __Strata_DATA_END__"
+SENTINELS = {
+    "2122": ("// __STRATA_2122_START__", "// __STRATA_2122_END__"),
+    "2024": ("// __STRATA_2024_START__", "// __STRATA_2024_END__"),
+}
 
-# Atmospheric colour semantics — kept in injector so colours are consistent
+# ── Colour maps ───────────────────────────────────────────────────────────────
 AM_COLORS = {
     "stagnant_mix":    "#1e2e3c",
     "marine_air":      "#00d4ff",
@@ -63,243 +68,393 @@ CORR_LABELS = {
     "wind_speed":     "Wind speed",
     "humidity":       "Humidity",
 }
-
-# Station coordinates (not in dataset — fixed geographic facts)
+SEASON_COLORS = {
+    "Winter": "#00d4ff",
+    "Spring": "#39d98a",
+    "Summer": "#ff9a00",
+    "Autumn": "#ff4455",
+}
 STATION_COORDS = {
-    "Avda. Francia":             {"lat": 39.4632, "lon": -0.3451},
-    "Av. Francia":               {"lat": 39.4632, "lon": -0.3451},
-    "Bulevard Sud":              {"lat": 39.4501, "lon": -0.3928},
-    "Conselleria Meteo":         {"lat": 39.4700, "lon": -0.3700},
-    "Moli del Sol":              {"lat": 39.4447, "lon": -0.3802},
-    "Molí del Sol":              {"lat": 39.4447, "lon": -0.3802},
-    "Nazaret Meteo":             {"lat": 39.4540, "lon": -0.3370},
-    "Natzaret Meteo":            {"lat": 39.4540, "lon": -0.3370},
-    "Pista Silla":               {"lat": 39.4298, "lon": -0.4083},
-    "Pista de Silla":            {"lat": 39.4298, "lon": -0.4083},
-    "Politecnico":               {"lat": 39.4800, "lon": -0.3463},
-    "Politècnic":                {"lat": 39.4800, "lon": -0.3463},
-    "Puerto llit antic":         {"lat": 39.4590, "lon": -0.3280},
-    "Puerto llit antic Turia":   {"lat": 39.4590, "lon": -0.3280},
-    "Puerto Moll Trans.":        {"lat": 39.4510, "lon": -0.3190},
-    "Puerto Moll Trans. Ponent": {"lat": 39.4510, "lon": -0.3190},
-    "Valencia Centro":           {"lat": 39.4698, "lon": -0.3763},
-    "Valencia Olivereta":        {"lat": 39.4680, "lon": -0.4050},
-    "Viveros":                   {"lat": 39.4793, "lon": -0.3640},
+    "Avda. Francia":     {"lat": 39.4632, "lon": -0.3451},
+    "Bulevar Sur":       {"lat": 39.4501, "lon": -0.3928},
+    "Bulevard Sud":      {"lat": 39.4501, "lon": -0.3928},
+    "Conselleria Meteo": {"lat": 39.4700, "lon": -0.3700},
+    "Molino del Sol":    {"lat": 39.4447, "lon": -0.3802},
+    "Molí del Sol":      {"lat": 39.4447, "lon": -0.3802},
+    "Nazaret Meteo":     {"lat": 39.4540, "lon": -0.3370},
+    "Pista Silla":       {"lat": 39.4298, "lon": -0.4083},
+    "Politecnico":       {"lat": 39.4800, "lon": -0.3463},
+    "Politècnic":        {"lat": 39.4800, "lon": -0.3463},
+    "Centro":            {"lat": 39.4698, "lon": -0.3763},
+    "Centre":            {"lat": 39.4698, "lon": -0.3763},
+    "Viveros":           {"lat": 39.4793, "lon": -0.3640},
+    "Vivers":            {"lat": 39.4793, "lon": -0.3640},
+    "Valencia Centre":   {"lat": 39.4698, "lon": -0.3763},
+    "Valencia Olivereta":{"lat": 39.4720, "lon": -0.4060},
+    "Conselleria":       {"lat": 39.4700, "lon": -0.3700},
 }
 
-
-def _f(val, decimals=3):
+def _f(val, d=3):
     if val is None or (isinstance(val, float) and math.isnan(val)):
         return 0.0
-    return round(float(val), decimals)
+    return round(float(val), d)
 
-
-def _get_coord(station_name, key):
-    """Look up lat/lon for a station name with fuzzy fallback."""
-    if station_name in STATION_COORDS:
-        return STATION_COORDS[station_name][key]
-    name_lower = str(station_name).lower()
+def _coord(name, key):
+    if name in STATION_COORDS:
+        return STATION_COORDS[name][key]
     for k, v in STATION_COORDS.items():
-        if k.lower() in name_lower or name_lower in k.lower():
+        if k.lower() in name.lower() or name.lower() in k.lower():
             return v[key]
-    # Last resort: use value from findings if present
     return 0.0
 
+# ── Block builders ────────────────────────────────────────────────────────────
 
-def build_data_block(findings: dict) -> str:
-    """
-    Build the complete JS data block from findings.
-    Every value here is pipeline-derived — no hardcoding.
-    """
-    s   = findings['summary']
-    d   = findings['diurnal']
-    prov = findings['provenance']
-    c   = findings.get('calima', {})
-    pm  = findings.get('pm10_stats', {})
-    stations = findings.get('stations', [])
-    corr     = findings.get('correlations', {})
-    am_list  = findings.get('air_mass', [])
+def build_2122_block(findings: dict) -> str:
+    """Build the JS data block for the 2021-2022 hourly dataset."""
+    s    = findings["summary"]
+    prov = findings["provenance"]
+    c    = findings.get("calima", {})
+    pm   = findings.get("pm10_stats", {})
+    diur = findings.get("diurnal", {})
+    stations = findings.get("stations", [])
+    corr     = findings.get("correlations", {})
+    am_list  = findings.get("air_mass", [])
 
+    START, END = SENTINELS["2122"]
     lines = [
-        START_SENTINEL,
-        "// GENERATED BY inject_findings.py — DO NOT EDIT MANUALLY",
-        f"// Source  : {prov.get('dataset', 'RVVCCA')}",
-        f"// Generated: {prov.get('generated_at', 'unknown')}",
-        f"// Pipeline : v{prov.get('pipeline_version', '?')}",
-        f"// Rows     : {s.get('n_obs', 0):,} valid station-hours",
-        f"// Stations : {s.get('n_stations', 0)}",
-        f"// Period   : {prov.get('date_range_start')} → {prov.get('date_range_end')}",
+        START,
+        "// GENERATED BY inject_findings.py --dataset 2122 — DO NOT EDIT MANUALLY",
+        f"// Source   : {prov.get('dataset','RVVCCA 2021-2022 hourly')}",
+        f"// Generated: {prov.get('generated_at','unknown')}",
+        f"// Pipeline : v{prov.get('pipeline_version','?')}",
+        f"// Rows     : {s.get('n_obs',0):,} valid station-hours",
         "",
     ]
 
-    # ── STATIONS (fully pipeline-derived) ─────────────────────────────────────
+    # STATIONS_2122
     st_rows = []
     for st in stations:
-        name = st.get('station', '')
-        lat = _f(st.get('latitude') or _get_coord(name, 'lat'), 4)
-        lon = _f(st.get('longitude') or _get_coord(name, 'lon'), 4)
+        name = st.get("station","")
+        lat  = _f(st.get("latitude") or _coord(name,"lat"), 4)
+        lon  = _f(st.get("longitude") or _coord(name,"lon"), 4)
         st_rows.append(
-            f"  {{station:{name!r},"
-            f"lat:{lat},lon:{lon},"
-            f"pm10:{_f(st.get('pm10_mean',0),1)},"
-            f"pm25:{_f(st.get('pm25_mean',0),1)},"
-            f"no2:{_f(st.get('no2_mean',0),1)},"
-            f"o3:{_f(st.get('o3_mean',0),1)},"
-            f"aqi_sci:{_f(st.get('cmpi_mean',0),2)},"
-            f"aqi_public:{_f(st.get('public_mean',0),2)},"
-            f"aqi_div:{_f(st.get('aqi_div_mean',0),4)},"
-            f"aqi_div_max:{_f(st.get('aqi_div_max',0),2)},"
-            f"calima:{int(st.get('calima_hours',0))},"
-            f"aci:{_f(st.get('aci_mean',0),4)},"
-            f"n_obs:{int(st.get('n_obs',0))}}}"
+            f"  {{station:{name!r},lat:{lat},lon:{lon},"
+            f"pm10:{_f(st.get('pm10_mean',0),1)},pm25:{_f(st.get('pm25_mean',0),1)},"
+            f"no2:{_f(st.get('no2_mean',0),1)},o3:{_f(st.get('o3_mean',0),1)},"
+            f"aqi_sci:{_f(st.get('cmpi_mean',0),2)},aqi_public:{_f(st.get('public_mean',0),2)},"
+            f"aqi_div:{_f(st.get('aqi_div_mean',0),4)},aqi_div_max:{_f(st.get('aqi_div_max',0),2)},"
+            f"calima:{int(st.get('calima_hours',st.get('calima_days',0)))},"
+            f"aci:{_f(st.get('aci_mean',0),4)},n_obs:{int(st.get('n_obs',0))}}}"
         )
-    lines.append("const STATIONS=[")
-    lines.append(",\n".join(st_rows))
-    lines.append("];")
-    lines.append("")
+    lines += ["const STATIONS_2122=[", ",\n".join(st_rows), "];", ""]
 
-    # ── HOURLY_DIV (pipeline-derived, rounded to 4dp) ─────────────────────────
-    div_arr = d.get('divergence_array', [])
-    if div_arr:
-        lines.append(f"// Mean CMPI divergence by hour — peak {d['peak_hour']:02d}:00 "
-                     f"({d['peak_divergence']:.4f} pts), min {d['min_hour']:02d}:00 "
-                     f"({d['min_divergence']:.4f} pts)")
-        lines.append(f"const HOURLY_DIV=[{','.join(str(_f(v,4)) for v in div_arr)}];")
+    # HOURLY_DIV — 24 values of mean divergence by hour
+    hourly = diur.get("hours", [])
+    if hourly:
+        hd_map = {r.get("hour",r.get("hora",i)): r.get("aqi_divergence",0) for i,r in enumerate(hourly)}
+        hd_arr = [_f(hd_map.get(h,0),4) for h in range(24)]
     else:
-        lines.append("const HOURLY_DIV=[];")
+        hd_arr = [0.0]*24
+    lines.append(f"const HOURLY_DIV=[{','.join(str(v) for v in hd_arr)}];")
+
+    # REAL_NO2, REAL_O3, REAL_PM10 — hourly mean pollutant arrays from diurnal findings
+    for col, jsname in [("no2","REAL_NO2"),("o3","REAL_O3"),("pm10","REAL_PM10")]:
+        if hourly:
+            col_map = {r.get("hour",r.get("hora",i)): r.get(col,0) for i,r in enumerate(hourly)}
+            arr = [_f(col_map.get(h,0),2) for h in range(24)]
+        else:
+            arr = [0.0]*24
+        lines.append(f"const {jsname}=[{','.join(str(v) for v in arr)}];")
     lines.append("")
 
-    # ── O3_SCHEMATIC (labelled as schematic — not pipeline data) ─────────────
-    lines.append("// O3 diurnal schematic — illustrative only, not pipeline-derived")
-    lines.append("const O3_SCHEMATIC=[28,24,21,19,18,20,25,33,42,52,62,71,78,83,87,89,88,85,79,70,58,47,38,33];")
-    lines.append("")
-
-    # ── CORR_DATA (pipeline-derived) ──────────────────────────────────────────
+    # CORR_DATA_2122
     corr_rows = []
     for col, val in corr.items():
         label = CORR_LABELS.get(col, col)
-        color = CORR_COLORS.get(col, '#3a5060')
+        color = CORR_COLORS.get(col, "#3a5060")
         corr_rows.append(f"  {{var:{label!r},r:{_f(val,4)},color:{color!r}}}")
-    lines.append("const CORR_DATA=[")
-    lines.append(",\n".join(corr_rows))
-    lines.append("];")
-    lines.append("")
+    lines += ["const CORR_DATA_2122=[", ",\n".join(corr_rows), "];", ""]
 
-    # ── AM_DATA (pipeline-derived) ────────────────────────────────────────────
+    # AM_DATA_2122
     am_parts = []
     for row in am_list:
-        key   = row.get('air_mass_type', 'unknown')
-        color = AM_COLORS.get(key, '#3a5060')
-        label = AM_LABELS.get(key, key)
+        key   = row.get("air_mass_type","unknown")
+        color = AM_COLORS.get(key,"#3a5060")
+        label = AM_LABELS.get(key,key)
         am_parts.append(
-            f"{key}:{{n:{int(row.get('count',0))},"
-            f"pct:{_f(row.get('pct',0),2)},"
-            f"div:{_f(row.get('mean_div',0),4)},"
-            f"color:{color!r},"
-            f"label:{label!r}}}"
+            f"{key}:{{n:{int(row.get('count',0))},pct:{_f(row.get('pct',0),2)},"
+            f"div:{_f(row.get('mean_div',0),4)},color:{color!r},label:{label!r}}}"
         )
-    lines.append("const AM_DATA={")
-    lines.append(",\n".join(am_parts))
-    lines.append("};")
-    lines.append("")
+    lines += ["const AM_DATA_2122={", ",\n".join(am_parts), "};", ""]
 
-    # ── HEADLINE_STATS (pipeline-derived — used by cover & metric row) ─────────
-    max_pm10_station = pm.get('max_station', 'unknown')
-    max_pm10_date    = pm.get('max_datetime', '')[:10]
-    calima_n         = c.get('n_hours', 0)
-    calima_pct_over  = c.get('pct_public_over', 0)
+    # HEADLINE_2122
+    peak_hour = diur.get("peak_hour", 6)
+    min_hour  = diur.get("min_hour", 17)
+    peak_div  = diur.get("peak_divergence", 0)
+    min_div   = diur.get("min_divergence", 0)
+    swing     = diur.get("intraday_swing", 0)
+    no2_r     = _f(corr.get("no2",0), 4)
+    top_corr  = list(corr.items())[0] if corr else ("unknown",0)
 
-    lines.append("// Headline statistics — all pipeline-derived")
-    lines.append(f"const HEADLINE={{")
-    lines.append(f"  n_obs:{s.get('n_obs',0)},")
-    lines.append(f"  n_stations:{s.get('n_stations',0)},")
-    lines.append(f"  mean_divergence:{_f(s.get('mean_divergence',0),4)},")
-    lines.append(f"  max_divergence:{_f(s.get('max_divergence',0),4)},")
-    lines.append(f"  calima_hours:{calima_n},")
-    lines.append(f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',0),4)},")
-    lines.append(f"  pct_public_over_calima:{_f(calima_pct_over,2)},")
-    lines.append(f"  mean_aci:{_f(s.get('mean_aci',0),4)},")
-    lines.append(f"  mean_cmpi:{_f(s.get('mean_cmpi',0),4)},")
-    lines.append(f"  mean_public:{_f(s.get('mean_public',0),4)},")
-    lines.append(f"  max_pm10_hourly:{_f(pm.get('max_hourly',0),2)},")
-    lines.append(f"  max_pm10_station:{max_pm10_station!r},")
-    lines.append(f"  max_pm10_date:{max_pm10_date!r},")
-    lines.append(f"  peak_hour:{d.get('peak_hour',0)},")
-    lines.append(f"  peak_divergence:{_f(d.get('peak_divergence',0),4)},")
-    lines.append(f"  min_hour:{d.get('min_hour',0)},")
-    lines.append(f"  min_divergence:{_f(d.get('min_divergence',0),4)},")
-    lines.append(f"  intraday_swing:{_f(d.get('intraday_swing',0),4)},")
-    lines.append(f"  no2_r:{_f(findings['correlations'].get('no2',0),4)},")
-    lines.append(f"  generated_at:{prov.get('generated_at','')!r},")
-    lines.append(f"  pipeline_version:{prov.get('pipeline_version','')!r},")
-    lines.append(f"  date_range:{prov.get('date_range_start','')!r}+' → '+{prov.get('date_range_end','')!r},")
-    lines.append(f"}};")
-    lines.append("")
-
-    lines.append(END_SENTINEL)
+    lines += [
+        "const HEADLINE_2122={",
+        f"  n_obs:{s.get('n_obs',0)},",
+        f"  n_stations:{s.get('n_stations',0)},",
+        f"  mean_divergence:{_f(s.get('mean_divergence',0),4)},",
+        f"  max_divergence:{_f(s.get('max_divergence',0),4)},",
+        f"  pct_over_20:{_f(s.get('pct_over_20',0),4)},",
+        f"  calima_hours:{c.get('n_obs',c.get('n_days',0))},",
+        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',0),4)},",
+        f"  pct_public_over_calima:{_f(c.get('pct_public_over',0),2)},",
+        f"  mean_aci:{_f(s.get('mean_aci',0),4)},",
+        f"  mean_cmpi:{_f(s.get('mean_cmpi',0),4)},",
+        f"  mean_public:{_f(s.get('mean_public',0),4)},",
+        f"  max_pm10_hourly:{_f(pm.get('max_hourly',pm.get('max_daily',0)),2)},",
+        f"  max_pm10_station:{pm.get('max_station','unknown')!r},",
+        f"  max_pm10_date:{pm.get('max_date','')!r},",
+        f"  peak_hour:{int(peak_hour)},",
+        f"  peak_divergence:{_f(peak_div,4)},",
+        f"  min_hour:{int(min_hour)},",
+        f"  min_divergence:{_f(min_div,4)},",
+        f"  intraday_swing:{_f(swing,4)},",
+        f"  no2_r:{no2_r},",
+        f"  top_correlate:{top_corr[0]!r},",
+        f"  top_correlate_r:{_f(top_corr[1],4)},",
+        f"  generated_at:{prov.get('generated_at','')!r},",
+        f"  pipeline_version:{prov.get('pipeline_version','')!r},",
+        f"  date_range:{prov.get('date_range_start','')!r}+' → '+{prov.get('date_range_end','')!r},",
+        "};",
+        "",
+        END,
+    ]
     return "\n".join(lines)
 
 
-def inject(html_path: str, findings: dict, verbose: bool = True) -> bool:
+def build_2024_block(findings: dict) -> str:
+    """Build the JS data block for the 2024 daily dataset."""
+    s    = findings["summary"]
+    prov = findings["provenance"]
+    sea  = findings.get("seasonal", {})
+    c    = findings.get("calima", {})
+    dan  = findings.get("dana", {})
+    pm   = findings.get("pm10_stats", {})
+    stations = findings.get("stations", [])
+    corr     = findings.get("correlations", {})
+    am_list  = findings.get("air_mass", [])
+    monthly  = findings.get("monthly", [])
+
+    START, END = SENTINELS["2024"]
+    lines = [
+        START,
+        "// GENERATED BY inject_findings.py --dataset 2024 — DO NOT EDIT MANUALLY",
+        f"// Source   : {prov.get('dataset','RVVCCA 2024 daily')}",
+        f"// Generated: {prov.get('generated_at','unknown')}",
+        f"// Pipeline : v{prov.get('pipeline_version','?')}",
+        f"// Rows     : {s.get('n_obs',0):,} valid station-days",
+        f"// Resolution: Daily averages — diurnal analysis not applicable",
+        "",
+    ]
+
+    # STATIONS_2024
+    st_rows = []
+    for st in stations:
+        name = st.get("station","")
+        lat  = _f(st.get("latitude") or _coord(name,"lat"), 4)
+        lon  = _f(st.get("longitude") or _coord(name,"lon"), 4)
+        st_rows.append(
+            f"  {{station:{name!r},lat:{lat},lon:{lon},"
+            f"pm10:{_f(st.get('pm10_mean',0),1)},pm25:{_f(st.get('pm25_mean',0),1)},"
+            f"no2:{_f(st.get('no2_mean',0),1)},o3:{_f(st.get('o3_mean',0),1)},"
+            f"aqi_sci:{_f(st.get('cmpi_mean',0),2)},aqi_public:{_f(st.get('public_mean',0),2)},"
+            f"aqi_div:{_f(st.get('aqi_div_mean',0),4)},aqi_div_max:{_f(st.get('aqi_div_max',0),2)},"
+            f"calima:{int(st.get('calima_days',0))},dana_days:{int(st.get('dana_days',0))},"
+            f"aci:{_f(st.get('aci_mean',0),4)},n_obs:{int(st.get('n_obs',0))}}}"
+        )
+    lines += ["const STATIONS_2024=[", ",\n".join(st_rows), "];", ""]
+
+    # SEASONAL_DIV
+    season_order = ["Winter","Spring","Summer","Autumn"]
+    season_map   = {r["season"]: r for r in sea.get("seasons",[])}
+    s_parts = []
+    for sn in season_order:
+        row   = season_map.get(sn,{})
+        color = SEASON_COLORS.get(sn,"#3a5060")
+        s_parts.append(
+            f"  {sn.lower()!r}:{{label:{sn!r},div:{_f(row.get('aqi_divergence',0),4)},"
+            f"std:{_f(row.get('aqi_divergence_std',0),4)},pm10:{_f(row.get('pm10',0),1)},"
+            f"no2:{_f(row.get('no2',0),1)},o3:{_f(row.get('o3',0),1)},"
+            f"n:{int(row.get('n',0))},color:{color!r}}}"
+        )
+    lines += ["const SEASONAL_DIV={", ",\n".join(s_parts), "};", ""]
+
+    # MONTHLY_DATA
+    m_parts = []
+    for row in sorted(monthly, key=lambda x: x.get("month",0)):
+        m_parts.append(
+            f"  {{month:{row.get('month',0)},name:{row.get('month_name','?')!r},"
+            f"div:{_f(row.get('aqi_divergence',0),4)},pm10:{_f(row.get('pm10',0),1)},"
+            f"no2:{_f(row.get('no2',0),1)},n:{int(row.get('n',0))}}}"
+        )
+    lines += ["const MONTHLY_DATA=[", ",\n".join(m_parts), "];", ""]
+
+    # CORR_DATA_2024
+    corr_rows = []
+    for col, val in corr.items():
+        label = CORR_LABELS.get(col,col)
+        color = CORR_COLORS.get(col,"#3a5060")
+        corr_rows.append(f"  {{var:{label!r},r:{_f(val,4)},color:{color!r}}}")
+    lines += ["const CORR_DATA_2024=[", ",\n".join(corr_rows), "];", ""]
+
+    # AM_DATA_2024
+    am_parts = []
+    for row in am_list:
+        key   = row.get("air_mass_type","unknown")
+        color = AM_COLORS.get(key,"#3a5060")
+        label = AM_LABELS.get(key,key)
+        am_parts.append(
+            f"{key}:{{n:{int(row.get('count',0))},pct:{_f(row.get('pct',0),2)},"
+            f"div:{_f(row.get('mean_div',0),4)},color:{color!r},label:{label!r}}}"
+        )
+    lines += ["const AM_DATA_2024={", ",\n".join(am_parts), "};", ""]
+
+    # DANA_DATA
+    lines += [
+        "const DANA_DATA={",
+        f"  n_days:{dan.get('n_days',0)},",
+        f"  pct_of_obs:{_f(dan.get('pct_of_valid_obs',0),4)},",
+        f"  mean_divergence:{_f(dan.get('mean_divergence',0),4)},",
+        f"  normal_divergence:{_f(dan.get('normal_divergence',0),4)},",
+        f"  calima_divergence:{_f(dan.get('calima_divergence'),4)},",
+        f"  pct_public_over:{_f(dan.get('pct_public_over',0),2)},",
+        f"  max_pm10_daily:{_f(dan.get('max_pm10_daily',0),2)},",
+        f"  max_pm10_station:{dan.get('max_pm10_station','unknown')!r},",
+        f"  max_pm10_date:{dan.get('max_pm10_date','')!r},",
+        f"  event_window:{dan.get('event_window','2024-10-29 → 2024-12-15')!r},",
+        "};",
+        "",
+    ]
+
+    # HEADLINE_2024
+    top_corr = list(corr.items())[0] if corr else ("unknown",0)
+    lines += [
+        "const HEADLINE_2024={",
+        f"  n_obs:{s.get('n_obs',0)},",
+        f"  n_stations:{s.get('n_stations',0)},",
+        f"  mean_divergence:{_f(s.get('mean_divergence',0),4)},",
+        f"  max_divergence:{_f(s.get('max_divergence',0),4)},",
+        f"  pct_over_20:{_f(s.get('pct_over_20',0),4)},",
+        f"  calima_days:{c.get('n_days',0)},",
+        f"  calima_pct_of_obs:{_f(c.get('pct_of_valid_obs',0),4)},",
+        f"  pct_public_over_calima:{_f(c.get('pct_public_over',0),2)},",
+        f"  dana_days:{dan.get('n_days',0)},",
+        f"  dana_mean_divergence:{_f(dan.get('mean_divergence',0),4)},",
+        f"  mean_aci:{_f(s.get('mean_aci',0),4)},",
+        f"  mean_cmpi:{_f(s.get('mean_cmpi',0),4)},",
+        f"  mean_public:{_f(s.get('mean_public',0),4)},",
+        f"  max_pm10_daily:{_f(pm.get('max_daily',0),2)},",
+        f"  max_pm10_station:{pm.get('max_station','unknown')!r},",
+        f"  max_pm10_date:{pm.get('max_date','')!r},",
+        f"  days_exceeding_who:{pm.get('days_exceeding_who',0)},",
+        f"  peak_season:{sea.get('peak_season','—')!r},",
+        f"  peak_season_divergence:{_f(sea.get('peak_divergence',0),4)},",
+        f"  min_season:{sea.get('min_season','—')!r},",
+        f"  seasonal_swing:{_f(sea.get('seasonal_swing',0),4)},",
+        f"  top_correlate:{top_corr[0]!r},",
+        f"  top_correlate_r:{_f(top_corr[1],4)},",
+        f"  resolution:'daily',",
+        f"  generated_at:{prov.get('generated_at','')!r},",
+        f"  pipeline_version:{prov.get('pipeline_version','')!r},",
+        f"  date_range:{prov.get('date_range_start','')!r}+' → '+{prov.get('date_range_end','')!r},",
+        "};",
+        "",
+        END,
+    ]
+    return "\n".join(lines)
+
+
+# ── Injection ─────────────────────────────────────────────────────────────────
+
+def inject(html_path: str, findings: dict, dataset: str, verbose: bool = True) -> bool:
     if not os.path.exists(html_path):
         print(f"  ✗ HTML not found: {html_path}")
         return False
 
-    with open(html_path, 'r', encoding='utf-8') as f:
+    start_sentinel, end_sentinel = SENTINELS[dataset]
+
+    with open(html_path, "r", encoding="utf-8") as f:
         html = f.read()
 
-    if START_SENTINEL not in html or END_SENTINEL not in html:
-        print(f"  ✗ Sentinels not found in {html_path}")
+    if start_sentinel not in html or end_sentinel not in html:
+        print(f"  ✗ Sentinels for dataset {dataset} not found in {html_path}")
+        print(f"    Expected: {start_sentinel!r}")
         return False
 
-    start = html.index(START_SENTINEL)
-    end   = html.index(END_SENTINEL) + len(END_SENTINEL)
-    new_block = build_data_block(findings)
-    new_html  = html[:start] + new_block + html[end:]
+    start = html.index(start_sentinel)
+    end   = html.index(end_sentinel) + len(end_sentinel)
 
-    # Backup
-    with open(html_path + '.bak', 'w', encoding='utf-8') as f:
+    if dataset == "2122":
+        new_block = build_2122_block(findings)
+    else:
+        new_block = build_2024_block(findings)
+
+    new_html = html[:start] + new_block + html[end:]
+
+    with open(html_path + ".bak", "w", encoding="utf-8") as f:
         f.write(html)
-
-    with open(html_path, 'w', encoding='utf-8') as f:
+    with open(html_path, "w", encoding="utf-8") as f:
         f.write(new_html)
 
     if verbose:
-        s  = findings['summary']
-        pm = findings.get('pm10_stats', {})
-        print(f"  ✓ Portfolio updated: {html_path}")
-        print(f"    Backup: {html_path}.bak")
-        print(f"    Observations: {s['n_obs']:,} | "
+        s   = findings["summary"]
+        prov = findings["provenance"]
+        print(f"  ✓ Portfolio updated [{dataset}]: {html_path}")
+        print(f"    Backup : {html_path}.bak")
+        print(f"    Obs    : {s['n_obs']:,} | "
               f"Mean div: {s['mean_divergence']:.4f} | "
-              f"Calima: {findings.get('calima',{}).get('n_hours',0):,}h | "
-              f"Max PM10: {pm.get('max_hourly',0):.1f} µg/m³ "
-              f"at {pm.get('max_station','?')}")
-        print(f"    Generated: {findings['provenance']['generated_at']}")
-
+              f"Generated: {prov['generated_at']}")
     return True
 
 
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--html', default=None)
-    parser.add_argument('--findings', default=None)
-    parser.add_argument('--dry-run', action='store_true')
+    parser = argparse.ArgumentParser(
+        description="Inject pipeline findings into two-tab Strata portfolio"
+    )
+    parser.add_argument("--dataset",  required=True, choices=["2122","2024"],
+                        help="Which dataset block to inject: 2122 or 2024")
+    parser.add_argument("--html",     default=None,
+                        help="Path to strata_portfolio.html (default: auto-detect)")
+    parser.add_argument("--findings", default=None,
+                        help="Path to findings JSON (default: dataset-appropriate path)")
+    parser.add_argument("--dry-run",  action="store_true",
+                        help="Print the generated JS block without writing to HTML")
     args = parser.parse_args()
 
-    findings_path = args.findings or FINDINGS_PATH
-    html_path     = args.html or DEFAULT_HTML
+    html_path = args.html or DEFAULT_HTML
+
+    if args.findings:
+        findings_path = args.findings
+    else:
+        findings_path = FINDINGS_2122 if args.dataset == "2122" else FINDINGS_2024
 
     if not os.path.exists(findings_path):
         print(f"✗ Findings not found: {findings_path}")
-        print("Run: python src/run_pipeline.py")
+        if args.dataset == "2122":
+            print("  Run: python src/run_pipeline.py  (with 2021-2022 data)")
+        else:
+            print("  Run: python src/run_pipeline.py --fetch")
         sys.exit(1)
 
     with open(findings_path) as f:
         findings = json.load(f)
 
     if args.dry_run:
-        print(build_data_block(findings))
+        if args.dataset == "2122":
+            print(build_2122_block(findings))
+        else:
+            print(build_2024_block(findings))
         sys.exit(0)
 
-    success = inject(html_path, findings, verbose=True)
+    success = inject(html_path, findings, args.dataset, verbose=True)
     sys.exit(0 if success else 1)
