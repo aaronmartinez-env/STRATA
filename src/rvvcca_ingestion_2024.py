@@ -52,15 +52,10 @@ MONTHLY_URLS = {
     "2024-12": "https://dadesobertes.gva.es/dataset/aaf53b06-b0ed-4637-9900-4825c1af6af8/resource/c95d4177-5ec0-464d-bb21-16b8272aa644/download/contaminacion-atmosferica-y-ozono-promedios-diarios_202412.csv",
 }
 
-# ── Valencia city station codes (COD_ESTACION prefix 46250) ──────────────────
-# Confirmed present in January 2024 data with CMPI-relevant pollutants.
-# Conselleria Meteo (46250049) and Nazaret Met-2 (46250900) are met-only
-# and are retained for wind/temperature but will have NaN CMPI values.
+# ── Valencia city stations (COD_ESTACION prefix 46250) ───────────────────────
 
 VALENCIA_STATION_PREFIX = "46250"
 
-# Canonical names mapping: NOM_ESTACION (raw) → STRATA standard name
-# Aligns with STATION_COORDS in the original rvvcca_ingestion.py
 STATION_NAME_MAP = {
     "VALÈNCIA - PISTA DE SILLA":   "Pista Silla",
     "VALÈNCIA - VIVERS":           "Viveros",
@@ -73,55 +68,32 @@ STATION_NAME_MAP = {
     "VALÈNCIA - NAZARET MET-2":    "Nazaret Meteo",
 }
 
-# Station coordinates — same values as original rvvcca_ingestion.py
+# Verified coordinates (cross-checked against geoportal.valencia.es station pages)
 STATION_COORDS = {
-    "Pista Silla":      {"latitude": 39.4298, "longitude": -0.4083},
-    "Viveros":          {"latitude": 39.4793, "longitude": -0.3640},
-    "Politecnico":      {"latitude": 39.4800, "longitude": -0.3463},
-    "Avda. Francia":    {"latitude": 39.4632, "longitude": -0.3451},
-    "Molino del Sol":   {"latitude": 39.4447, "longitude": -0.3802},
-    "Conselleria Meteo":{"latitude": 39.4700, "longitude": -0.3700},
-    "Bulevar Sur":      {"latitude": 39.4501, "longitude": -0.3928},
-    "Centro":           {"latitude": 39.4698, "longitude": -0.3763},
-    "Nazaret Meteo":    {"latitude": 39.4540, "longitude": -0.3370},
+    "Pista Silla":      {"latitude": 39.45806, "longitude": -0.37665},
+    "Viveros":          {"latitude": 39.47949, "longitude": -0.36955},
+    "Politecnico":      {"latitude": 39.47962, "longitude": -0.33741},
+    "Avda. Francia":    {"latitude": 39.45750, "longitude": -0.34270},
+    "Molino del Sol":   {"latitude": 39.48114, "longitude": -0.40856},
+    "Conselleria Meteo":{"latitude": 39.4700,  "longitude": -0.3700},
+    "Bulevar Sur":      {"latitude": 39.45038, "longitude": -0.39631},
+    "Centro":           {"latitude": 39.4698,  "longitude": -0.3763},
+    "Nazaret Meteo":    {"latitude": 39.4540,  "longitude": -0.3370},
 }
 
 # ── Column mapping: raw GVA column names → STRATA standard ───────────────────
 
 COLUMN_MAP = {
-    "SO2":        "so2",
-    "CO":         "co",
-    "NO":         "no",
-    "NO2":        "no2",
-    "NOx":        "nox",
-    "O3":         "o3",
-    "PM10":       "pm10",
-    "PM2.5":      "pm25",
-    "PM1":        "pm1",
-    "NH3":        "nh3",
-    "C6H6":       "c6h6",
-    "C7H8":       "c7h8",
-    "C8H10":      "c8h10",
-    "Direc.":     "wind_direction",
-    "H.Rel.":     "humidity",
-    "Precip.":    "precipitation",
-    "Pres.":      "pressure",
-    "R.Sol.":     "radiation",
-    "Ruido":      "noise",
-    "Temp.":      "temperature",
-    "UV-B":       "uvb",
-    "Veloc.":     "wind_speed",
-    "Veloc.max.": "wind_speed_max",
-    "As":         "as",
-    "BaP":        "bap",
-    "Cd":         "cd",
-    "Ni":         "ni",
-    "Pb":         "pb",
-    "PST":        "pst",
+    "SO2": "so2", "CO": "co", "NO": "no", "NO2": "no2", "NOx": "nox", "O3": "o3",
+    "PM10": "pm10", "PM2.5": "pm25", "PM1": "pm1", "NH3": "nh3",
+    "C6H6": "c6h6", "C7H8": "c7h8", "C8H10": "c8h10",
+    "Direc.": "wind_direction", "H.Rel.": "humidity", "Precip.": "precipitation",
+    "Pres.": "pressure", "R.Sol.": "radiation", "Ruido": "noise",
+    "Temp.": "temperature", "UV-B": "uvb", "Veloc.": "wind_speed",
+    "Veloc.max.": "wind_speed_max", "As": "as", "BaP": "bap", "Cd": "cd",
+    "Ni": "ni", "Pb": "pb", "PST": "pst",
 }
 
-
-# ── Download one monthly CSV ──────────────────────────────────────────────────
 
 def download_month(month_key: str, url: str, verbose: bool = True) -> pd.DataFrame:
     if verbose:
@@ -149,34 +121,23 @@ def download_month(month_key: str, url: str, verbose: bool = True) -> pd.DataFra
     return df
 
 
-# ── Parse and normalise one month's raw DataFrame ────────────────────────────
-
 def parse_month(df: pd.DataFrame, valencia_only: bool = True) -> pd.DataFrame:
     if df.empty:
         return df
 
-    # 1. Filter to Valencia city stations
     if valencia_only:
         df = df[df["COD_ESTACION"].astype(str).str.startswith(VALENCIA_STATION_PREFIX)].copy()
         if df.empty:
             return df
 
-    # 2. Map station names to STRATA standard
     df["station"] = df["NOM_ESTACION"].map(STATION_NAME_MAP)
-    # Fallback: keep raw name if not in map (for --all-stations mode)
     df["station"] = df["station"].fillna(df["NOM_ESTACION"])
     df["station_code"] = df["COD_ESTACION"].astype(str)
 
-    # 3. Parse date (FECHA is YYYY-MM-DD)
     df["datetime"] = pd.to_datetime(df["FECHA"], format="%Y-%m-%d", errors="coerce")
-
-    # 4. Replace '-' missing value encoding with NaN
     df = df.replace("-", pd.NA)
-
-    # 5. Rename columns
     df = df.rename(columns={k: v for k, v in COLUMN_MAP.items() if k in df.columns})
 
-    # 6. Fix decimal comma → period and cast to numeric
     numeric_cols = [
         "pm1", "pm25", "pm10", "no", "no2", "nox", "o3", "so2", "co", "nh3",
         "wind_speed", "wind_direction", "wind_speed_max",
@@ -186,38 +147,25 @@ def parse_month(df: pd.DataFrame, valencia_only: bool = True) -> pd.DataFrame:
     for col in numeric_cols:
         if col in df.columns:
             if df[col].dtype == object:
-                df[col] = (
-                    df[col].astype(str)
-                    .str.replace(",", ".", regex=False)
-                    .str.strip()
-                    .replace("nan", pd.NA)
-                    .replace("<NA>", pd.NA)
-                )
+                df[col] = (df[col].astype(str).str.replace(",", ".", regex=False)
+                          .str.strip().replace("nan", pd.NA).replace("<NA>", pd.NA))
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # 7. Add coordinates
     df["latitude"]  = df["station"].map(lambda s: STATION_COORDS.get(s, {}).get("latitude"))
     df["longitude"] = df["station"].map(lambda s: STATION_COORDS.get(s, {}).get("longitude"))
 
-    # 8. Select output columns
     core = ["datetime", "station", "station_code", "latitude", "longitude",
             "pm25", "pm10", "no2", "o3"]
     bonus = ["no", "nox", "so2", "co", "nh3", "pm1",
              "wind_speed", "wind_direction", "wind_speed_max",
              "temperature", "humidity", "pressure", "precipitation",
              "radiation", "noise"]
-    keep = [c for c in core if c in df.columns] + \
-           [c for c in bonus if c in df.columns]
+    keep = [c for c in core if c in df.columns] + [c for c in bonus if c in df.columns]
     return df[keep]
 
 
-# ── Download and concatenate all 12 months ───────────────────────────────────
-
-def download_all_months(
-    months: dict = None,
-    valencia_only: bool = True,
-    verbose: bool = True,
-) -> pd.DataFrame:
+def download_all_months(months: dict = None, valencia_only: bool = True,
+                        verbose: bool = True) -> pd.DataFrame:
     if months is None:
         months = MONTHLY_URLS
 
@@ -245,8 +193,6 @@ def download_all_months(
     return df
 
 
-# ── Date filter ───────────────────────────────────────────────────────────────
-
 def filter_dates(df, date_from=None, date_to=None):
     if date_from:
         df = df[df["datetime"] >= pd.Timestamp(date_from)]
@@ -254,8 +200,6 @@ def filter_dates(df, date_from=None, date_to=None):
         df = df[df["datetime"] <= pd.Timestamp(date_to) + pd.Timedelta(days=1)]
     return df.reset_index(drop=True)
 
-
-# ── Quality report ────────────────────────────────────────────────────────────
 
 def data_quality_report(df: pd.DataFrame) -> None:
     print("\n── Data Quality Report (2024 Daily) ────────────────────")
@@ -287,20 +231,9 @@ def data_quality_report(df: pd.DataFrame) -> None:
     print()
 
 
-# ── Load-or-fetch (called by run_pipeline.py) ─────────────────────────────────
-
-def load_or_fetch(
-    filename:      str  = "air_quality_2024_daily.csv",
-    date_from:     str  = None,
-    date_to:       str  = None,
-    force_fetch:   bool = False,
-    valencia_only: bool = True,
-    verbose:       bool = True,
-) -> pd.DataFrame:
-    """
-    Load cached 2024 daily data if it exists, otherwise download and cache it.
-    Drop-in complement to the original load_or_fetch in rvvcca_ingestion.py.
-    """
+def load_or_fetch(filename: str = "air_quality_2024_daily.csv", date_from: str = None,
+                  date_to: str = None, force_fetch: bool = False,
+                  valencia_only: bool = True, verbose: bool = True) -> pd.DataFrame:
     cache_path = os.path.join(BASE_PATH, "raw", filename)
 
     if not force_fetch and os.path.exists(cache_path):
@@ -324,20 +257,14 @@ def load_or_fetch(
     return df
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Download 2024 daily RVVCCA data from dadesobertes.gva.es"
     )
-    parser.add_argument("--from",         dest="date_from",     default=None,
-                        help="Filter start date YYYY-MM-DD")
-    parser.add_argument("--to",           dest="date_to",       default=None,
-                        help="Filter end date YYYY-MM-DD")
-    parser.add_argument("--force",        action="store_true",
-                        help="Re-download even if cache exists")
-    parser.add_argument("--all-stations", action="store_true",
-                        help="Keep all Comunitat Valenciana stations (not just Valencia city)")
+    parser.add_argument("--from", dest="date_from", default=None)
+    parser.add_argument("--to", dest="date_to", default=None)
+    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--all-stations", action="store_true")
     args = parser.parse_args()
 
     df = load_or_fetch(

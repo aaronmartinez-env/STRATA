@@ -7,15 +7,12 @@ Key changes from 2021-2022 hourly version:
   - Diurnal (hour-of-day) analysis removed: daily averages have no time-of-day signal
   - Seasonal pattern replaces diurnal as temporal structure
   - DANA event analysis added as a new findings category
-  - Calima vs DANA comparison is the new headline scientific contribution
-  - 'station-days' replaces 'station-hours' in provenance
+  - Calima vs DANA comparison is the headline scientific contribution
+  - Daily aggregates (findings["daily"]) computed for client-side date-range
+    filtering in the portfolio frontend
 
 Data flow:
   strata_processed.csv → run_analysis() → findings.json → inject_findings.py → HTML
-
-Usage:
-  python src/analysis.py
-  (also called automatically by run_pipeline.py)
 """
 
 import pandas as pd
@@ -28,14 +25,10 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(__file__))
 from config import OUTPUT_PATH
 
-PIPELINE_VERSION = "2.0.0"  # major bump: new dataset, new resolution, new DANA analysis
+PIPELINE_VERSION = "2.0.0"
 
 
 def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
-    """
-    Run full divergence analysis on 2024 daily data.
-    Returns findings dict — the single source of truth for portfolio values.
-    """
     findings = {}
 
     if verbose:
@@ -55,7 +48,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
 
     aqi_pub_col = "aqi_public" if "aqi_public" in df.columns else "aqi_pub"
 
-    # ── Provenance metadata ───────────────────────────────────────────────────
     findings["provenance"] = {
         "generated_at":     datetime.now().strftime("%Y-%m-%d %H:%M UTC"),
         "pipeline_version": PIPELINE_VERSION,
@@ -75,7 +67,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
         ),
     }
 
-    # ── Overall summary ───────────────────────────────────────────────────────
     div = df["aqi_divergence"].dropna()
     calima_n = int(df["calima_event"].sum()) if "calima_event" in df.columns else 0
     dana_n   = int(df["dana_event"].sum())   if "dana_event"   in df.columns else 0
@@ -110,7 +101,7 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
         print(f"  DANA days       : {s['dana_days']:,}")
         print(f"  Mean ACI        : {s['mean_aci']:.4f}")
 
-    # ── Seasonal pattern (replaces diurnal for daily data) ────────────────────
+    # ── Seasonal pattern ───────────────────────────────────────────────────────
     season_order = ["Winter", "Spring", "Summer", "Autumn"]
     seasonal = df.groupby("season").agg(
         aqi_divergence     =("aqi_divergence", "mean"),
@@ -121,8 +112,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
         o3                 =("o3",             "mean"),
         n                  =("aqi_divergence", "count"),
     ).round(4).reset_index()
-
-    # Reorder to calendar season order
     seasonal["_order"] = seasonal["season"].map({s: i for i, s in enumerate(season_order)})
     seasonal = seasonal.sort_values("_order").drop(columns="_order")
 
@@ -160,7 +149,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
         n              =("aqi_divergence", "count"),
     ).round(4).reset_index()
     monthly["month_name"] = pd.to_datetime(monthly["month"], format="%m").dt.strftime("%b")
-
     findings["monthly"] = monthly.to_dict("records")
 
     # ── Per-station aggregates ────────────────────────────────────────────────
@@ -192,18 +180,15 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
             st_agg[col] = st_agg[col].astype(int)
 
     findings["stations"] = (
-        st_agg.sort_values("aqi_div_mean", ascending=False)
-        .to_dict("records")
+        st_agg.sort_values("aqi_div_mean", ascending=False).to_dict("records")
     )
 
     if verbose:
         print(f"\n[Stations — ranked by mean divergence]")
         for r in findings["stations"]:
             print(f"  {r['station']:<26} "
-                  f"div={r['aqi_div_mean']:.3f}  "
-                  f"PM10={r['pm10_mean']:.1f}  "
-                  f"NO2={r['no2_mean']:.1f}  "
-                  f"calima={r.get('calima_days',0)}d  "
+                  f"div={r['aqi_div_mean']:.3f}  PM10={r['pm10_mean']:.1f}  "
+                  f"NO2={r['no2_mean']:.1f}  calima={r.get('calima_days',0)}d  "
                   f"DANA={r.get('dana_days',0)}d")
 
     # ── Correlations ──────────────────────────────────────────────────────────
@@ -215,9 +200,7 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
             .drop("aqi_divergence")
             .sort_values(key=abs, ascending=False))
 
-    findings["correlations"] = {
-        col: round(float(val), 4) for col, val in corr.items()
-    }
+    findings["correlations"] = {col: round(float(val), 4) for col, val in corr.items()}
 
     if verbose:
         print(f"\n[Correlations with CMPI divergence]")
@@ -236,28 +219,19 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
     ).reset_index()
     am["pct"] = (am["pct"] / len(df) * 100).round(2)
     am = am.round(4)
-
     findings["air_mass"] = am.to_dict("records")
 
     # ── Calima episode analysis ───────────────────────────────────────────────
     if "calima_event" in df.columns:
         cal  = df[df["calima_event"] == True]
         norm = df[df["calima_event"] == False]
-
         if len(cal) > 0:
             cal_over = (cal[aqi_pub_col] > cal["aqi_scientific"]).sum()
             cal_pct  = float(cal_over) / len(cal) * 100
-
             findings["calima"] = {
                 "n_days":               int(len(cal)),
                 "pct_of_valid_obs":     round(float(len(cal)) / len(df) * 100, 4),
                 "pct_public_over":      round(cal_pct, 2),
-                "over_read_definition": (
-                    "Cases where public PM10-only index score exceeded "
-                    "the CMPI score for the same station-day during a "
-                    "confirmed calima event (dual-criterion: PM10 > 3-day "
-                    "rolling mean + 1.5σ AND PM10/PM2.5 ratio > 3.0)"
-                ),
                 "mean_public_aqi":      round(float(cal[aqi_pub_col].mean()), 4),
                 "mean_cmpi":            round(float(cal["aqi_scientific"].mean()), 4),
                 "mean_divergence":      round(float(cal["aqi_divergence"].mean()), 4),
@@ -276,13 +250,10 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
     if "dana_event" in df.columns:
         dana     = df[df["dana_event"] == True]
         non_dana = df[df["dana_event"] == False]
-
         if len(dana) > 0:
             dana_over = (dana[aqi_pub_col] > dana["aqi_scientific"]).sum()
             dana_pct  = float(dana_over) / len(dana) * 100
-
             calima_div = findings["calima"].get("mean_divergence") if findings["calima"].get("n_days", 0) > 0 else None
-
             findings["dana"] = {
                 "n_days":                int(len(dana)),
                 "pct_of_valid_obs":      round(float(len(dana)) / len(df) * 100, 4),
@@ -297,32 +268,19 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
                 "max_pm10_station":      dana.loc[dana["pm10"].idxmax(), "station"],
                 "max_pm10_date":         str(dana.loc[dana["pm10"].idxmax(), "datetime"].date()),
                 "event_window":          "2024-10-29 → 2024-12-15",
-                "detection_note": (
-                    "DANA events are flood-derived terrestrial dust resuspension "
-                    "episodes. Detection criterion: PM10 spike + PM10/PM2.5 > 2.5 "
-                    "within the Oct 29 – Dec 15 2024 window, not already classified "
-                    "as calima (Saharan dust takes precedence)."
-                ),
             }
-
             if verbose:
                 d = findings["dana"]
                 print(f"\n[DANA]")
                 print(f"  Station-days    : {d['n_days']:,} ({d['pct_of_valid_obs']:.2f}%)")
                 print(f"  Public > CMPI   : {d['pct_public_over']:.1f}% of DANA days")
                 print(f"  Mean divergence : {d['mean_divergence']:.4f} (vs non-event: {d['normal_divergence']:.4f})")
-                if calima_div:
-                    print(f"  vs Calima div   : {calima_div:.4f}")
-                print(f"  Max daily PM10  : {d['max_pm10_daily']:.1f} µg/m³ at {d['max_pm10_station']}")
         else:
-            findings["dana"] = {
-                "n_days": 0,
-                "note": "No DANA events detected — check Oct-Dec 2024 data coverage"
-            }
+            findings["dana"] = {"n_days": 0}
     else:
         findings["dana"] = {"n_days": 0}
 
-    # ── Daily aggregates (for time-series charts) ─────────────────────────────
+    # ── Daily aggregates — for client-side date-range filtering in the portfolio
     daily_cols = {
         "pm10":    ("pm10",            "mean"),
         "pm25":    ("pm25",            "mean"),
@@ -342,7 +300,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
 
     daily = df.groupby("date").agg(**daily_cols).reset_index().round(4)
     daily["date"] = daily["date"].astype(str)
-
     findings["daily"] = daily.to_dict("records")
 
     # ── PM10 overall stats ────────────────────────────────────────────────────
@@ -357,13 +314,6 @@ def run_analysis(df: pd.DataFrame, verbose: bool = True) -> dict:
         "who_limit_24h": 45,
         "days_exceeding_who": int((pm10_all > 45).sum()),
     }
-
-    if verbose:
-        pm = findings["pm10_stats"]
-        print(f"\n[PM10]")
-        print(f"  Max daily avg: {pm['max_daily']:.1f} µg/m³ "
-              f"at {pm['max_station']} ({pm['max_date']})")
-        print(f"  Days > WHO 45 µg/m³ guideline: {pm['days_exceeding_who']}")
 
     if verbose:
         print(f"\n✓ Analysis complete — {len(findings)} finding categories.")
@@ -392,34 +342,19 @@ def print_research_summary(findings: dict) -> None:
     pm  = findings.get("pm10_stats", {})
     prov = findings["provenance"]
 
-    print(f"\n  Q: How accurately do public AQI representations")
-    print(f"     reflect atmospheric conditions in Valencia?\n")
-    print(f"  Dataset         : {prov.get('dataset','')}")
+    print(f"\n  Dataset         : {prov.get('dataset','')}")
     print(f"  Observations    : {s['n_obs']:,} station-days")
-    print(f"  Stations        : {s['n_stations']}")
-    print(f"  Date range      : {prov['date_range_start']} → {prov['date_range_end']}")
-    print(f"\n  Mean CMPI gap   : {s['mean_divergence']:.4f} index pts")
+    print(f"  Mean CMPI gap   : {s['mean_divergence']:.4f} index pts")
     print(f"  Max CMPI gap    : {s['max_divergence']:.4f} index pts")
     print(f"  Peak season     : {sea.get('peak_season','?')} (gap = {sea.get('peak_divergence','?')} pts)")
-    print(f"  Min season      : {sea.get('min_season','?')} (gap = {sea.get('min_divergence','?')} pts)")
-    top_corr = list(cr.items())[0] if cr else ("?", 0)
-    print(f"  Primary correlate: {top_corr[0]} (r = {top_corr[1]})")
-    print(f"  Calima days     : {c.get('n_days',0):,} ({c.get('pct_of_valid_obs',0):.2f}%)")
-    if c.get("n_days", 0) > 0:
-        print(f"  Calima div      : {c.get('mean_divergence','?'):.4f} pts mean")
-        print(f"  Public > CMPI   : {c.get('pct_public_over','?'):.1f}% of calima days")
+    print(f"  Calima days     : {c.get('n_days',0):,}")
     print(f"  DANA days       : {dan.get('n_days',0):,}")
-    if dan.get("n_days", 0) > 0:
-        print(f"  DANA div        : {dan.get('mean_divergence','?'):.4f} pts mean")
-        print(f"  DANA public>CMPI: {dan.get('pct_public_over','?'):.1f}% of DANA days")
-    print(f"  Max daily PM10  : {pm.get('max_daily','?')} µg/m³ at {pm.get('max_station','?')}")
     print(f"  Mean ACI        : {s['mean_aci']:.4f}")
     print(f"\n  Generated: {prov['generated_at']}")
     print("=" * 52 + "\n")
 
 
 if __name__ == "__main__":
-    sys.path.insert(0, os.path.dirname(__file__))
     processed_path = os.path.join(
         os.path.dirname(__file__), "../data/processed/strata_processed.csv"
     )
