@@ -47,10 +47,10 @@ body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;bac
 .hero-title{font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(3rem,5.8vw,5.5rem);line-height:1.08;color:var(--text);margin-bottom:1.5rem;max-width:900px;}
 .hero-title em{font-style:normal;color:var(--cyan);}
 .hero-sub{font-size:1.05rem;color:rgba(200,216,232,0.72);max-width:680px;line-height:1.88;margin-bottom:3rem;font-weight:300;}
-.ticker-wrap{display:flex;align-items:center;gap:0.9rem;margin-bottom:3.5rem;}
-.ticker-pre{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;color:var(--cyan);text-transform:uppercase;white-space:nowrap;}
-.ticker-el{font-family:var(--mono);font-size:0.7rem;color:rgba(200,216,232,0.65);}
-.tcursor{display:inline-block;width:5px;height:11px;background:var(--cyan);animation:blink 1.1s step-end infinite;vertical-align:middle;margin-left:2px;}
+
+
+
+
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
 /* TABS */
@@ -226,8 +226,6 @@ html.light .sc{background:rgba(248,251,255,0.92);}
 html.light .sc:hover{background:rgba(0,102,204,0.05);}
 html.light .stext{color:#007a44;}
 html.light .sdot{background:#007a44;}
-html.light .ticker-pre,.html.light .tcursor{color:#0066cc;}
-html.light .tcursor{background:#0066cc;}
 html.light .cite-ref{color:rgba(10,25,40,0.68);}
 html.light .cite-key{color:rgba(10,25,40,0.38);}
 html.light .cite-val{color:rgba(10,25,40,0.82);}
@@ -301,12 +299,6 @@ html.light .range-inputs input[type="date"]{color-scheme:light;}
   <div class="hero-eyebrow">Atmospheric Atlas · Environmental Science Research · CEAM–EUPHORE</div>
   <h1 class="hero-title">Understanding Valencia's <em>atmosphere</em> —<br>from observation to interpretation</h1>
   <p class="hero-sub">Strata is a data-driven platform for exploring how air quality, meteorology, pollutant transport, and atmospheric events interact across space and time in Valencia. Built from real observations across the RVVCCA monitoring network, across multiple datasets and years.</p>
-  <div class="ticker-wrap">
-    <span class="ticker-pre">Strata ›</span>
-    <span class="ticker-el" id="ticker-el">Initialising atmospheric atlas</span>
-    <span class="tcursor"></span>
-  </div>
-
   <!-- Tab switcher -->
   <div class="tab-bar" id="tab-bar">
     <button class="tab-btn active" data-tab="tab-2122" id="btn-2122">
@@ -2172,13 +2164,7 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 })();
 
 // ── TICKER ────────────────────────────────────────────────────────────────────
-(function(){
-  const msgs=["Sea breeze intrusion detected · Marine air dominant · O₃ accumulation building","Urban stagnation conditions · NO₂ accumulating · CMPI divergence elevated","Nocturnal boundary layer stable · O₃ at daily minimum · CMPI converging with public index","Photochemical regime · Solar-driven O₃ production · Afternoon divergence peak approaching","DANA flood signature · Terrestrial resuspension · Coarse aerosol local origin","RVVCCA network nominal · 9 stations active · 2024 daily data · DANA period included"];
-  const el=document.getElementById('ticker-el');
-  let mi=0,ci=0,typing=true,wait=0;
-  function tick(){if(wait>0){wait--;setTimeout(tick,30);return;}const msg=msgs[mi];if(typing){el.textContent=msg.slice(0,ci++);if(ci>msg.length){typing=false;wait=75;}}else{el.textContent=msg.slice(0,ci--);if(ci<0){ci=0;mi=(mi+1)%msgs.length;typing=true;wait=18;}}setTimeout(tick,typing?26:10);}
-  tick();
-})();
+
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const gc='rgba(255,255,255,0.025)';
