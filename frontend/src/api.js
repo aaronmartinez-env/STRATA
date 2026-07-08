@@ -39,4 +39,8 @@ export function fetchHourly({ station, from, to }) {
   return get(`/api/hourly?${params.toString()}`);
 }
 
+export function fetchCurrent() {
+  return get('/api/current');
+}
+
 export { ApiError };

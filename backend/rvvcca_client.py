@@ -100,6 +100,27 @@ def _normalise_row(raw_row: dict, station_code: str) -> dict:
     return row
 
 
+def fetch_latest(station_code: str, timeout: int = 30) -> dict | None:
+    """
+    Fetch the most recent available reading for one station.
+    Looks back 3 days to comfortably cover RVVCCA's ~2h provisional lag
+    plus any gaps, and returns the single latest row found.
+    Returns None if no data was found in that window.
+    """
+    from datetime import timedelta
+
+    today = datetime.utcnow()
+    from_date = (today - timedelta(days=3)).strftime("%Y-%m-%d")
+    to_date = today.strftime("%Y-%m-%d")
+
+    rows = fetch_hourly(station_code, from_date, to_date, timeout=timeout)
+    rows_with_dt = [r for r in rows if r.get("datetime")]
+    if not rows_with_dt:
+        return None
+
+    return max(rows_with_dt, key=lambda r: r["datetime"])
+
+
 def fetch_hourly(station_code: str, date_from: str, date_to: str, timeout: int = 30) -> list[dict]:
     """
     Fetch and normalise hourly data for one station and date range.

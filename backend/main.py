@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from rvvcca_client import fetch_hourly, RVVCCAError
+from rvvcca_client import fetch_hourly, fetch_latest, RVVCCAError
 from stations import VALENCIA_STATIONS, station_list
 
 app = FastAPI(title="STRATA API", version="0.1.0")
@@ -104,3 +104,33 @@ def get_hourly(
         "count": len(readings),
         "readings": readings,
     }
+
+
+@app.get("/api/current")
+def get_current():
+    """
+    Latest available reading for every Valencia station at once — the
+    data source for the Live tab's 3D "current atmosphere" snapshot.
+
+    Note: this makes one RVVCCA request per station (7 total), run
+    sequentially, so it's slower than /api/hourly for a single station.
+    Fine for a manual refresh; if this becomes a polling endpoint later,
+    add caching (e.g. 5-minute TTL) rather than hitting RVVCCA on every
+    page load.
+    """
+    stations_out = []
+    for code, info in VALENCIA_STATIONS.items():
+        try:
+            latest = fetch_latest(code)
+        except RVVCCAError:
+            latest = None
+
+        stations_out.append({
+            "code": code,
+            "name": info["name"],
+            "lat": info["lat"],
+            "lon": info["lon"],
+            "reading": latest,  # None if unavailable
+        })
+
+    return {"stations": stations_out}

@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
-import { fetchStations, fetchHourly, ApiError } from '../api';
+import { fetchStations, fetchHourly, fetchCurrent, ApiError } from '../api';
 import ReadingsChart, { PLOTTABLE_FIELDS } from '../components/ReadingsChart';
+import CityViz3D from '../components/CityViz3D';
 
 function defaultDateRange() {
   // Default to the last 7 days — enough to see a real pattern without
@@ -24,6 +25,29 @@ export default function Live() {
   const [readings, setReadings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const [currentSnapshot, setCurrentSnapshot] = useState([]);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState(null);
+
+  const loadSnapshot = useCallback(() => {
+    setSnapshotLoading(true);
+    setSnapshotError(null);
+    fetchCurrent()
+      .then((data) => setCurrentSnapshot(data.stations))
+      .catch((err) => {
+        setSnapshotError(
+          err instanceof ApiError
+            ? err.message
+            : 'Could not reach the STRATA API for the current snapshot.'
+        );
+      })
+      .finally(() => setSnapshotLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadSnapshot();
+  }, [loadSnapshot]);
 
   // Load the station list once on mount.
   useEffect(() => {
@@ -125,8 +149,26 @@ export default function Live() {
         )}
       </div>
 
-      <div className="viz3d-placeholder" style={{ border: '1px dashed #ccc', padding: '2rem', opacity: 0.6 }}>
-        3D city visualization — next pass, once 2D data flow is confirmed solid.
+      <div className="viz3d-container" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <h2 style={{ fontSize: '1.1rem', margin: '0 0 0.5rem' }}>Current Atmosphere — All Stations</h2>
+          <button onClick={loadSnapshot} disabled={snapshotLoading} style={{ fontSize: '0.85rem' }}>
+            {snapshotLoading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
+        <p style={{ opacity: 0.7, fontSize: '0.9rem', marginTop: 0 }}>
+          Latest available {PLOTTABLE_FIELDS[field]?.label ?? field} reading per station, right now.
+        </p>
+
+        {snapshotError && !snapshotLoading && (
+          <p style={{ color: '#b3261e' }}>{snapshotError}</p>
+        )}
+        {snapshotLoading && currentSnapshot.length === 0 && (
+          <p style={{ opacity: 0.6 }}>Loading current snapshot…</p>
+        )}
+        {currentSnapshot.length > 0 && (
+          <CityViz3D stations={currentSnapshot} field={field} />
+        )}
       </div>
 
       <p style={{ marginTop: '2rem' }}>
