@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata — Atmospheric Atlas · Valencia</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400;1,600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --void:#04060a; --deep:#070c12;
+  --glass:rgba(8,16,28,0.72); --glass2:rgba(10,18,32,0.88);
+  --rim:rgba(80,160,240,0.10); --rim2:rgba(80,160,240,0.22);
+  --fog:rgba(255,255,255,0.04);
+  --text:#c8d8e8; --muted:#3a5060; --dim:#1a2a38;
+  --cyan:#00d4ff; --green:#39d98a;
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+html{background:var(--void);color:var(--text);font-family:var(--sans);font-weight:300;font-size:17px;line-height:1.75;height:100%;overflow:hidden;}
+body{height:100%;overflow:hidden;}
+
+#atmos-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:0.45;}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1.1rem 2.5rem;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-family:var(--mono);font-size:0.72rem;font-weight:700;letter-spacing:0.22em;color:var(--cyan);text-transform:uppercase;}
+.nav-logo span{color:var(--muted);font-weight:300;}
+.nav-right{font-family:var(--mono);font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:0.6rem;}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.35;transform:scale(0.75);}}
+
+/* STAGE */
+.stage{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 3.5rem;max-width:1200px;margin:0 auto;}
+
+.eyebrow{font-family:var(--mono);font-size:0.55rem;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);margin-bottom:1.4rem;opacity:0;animation:fadeUp 0.7s ease 0.1s forwards;}
+
+.title{font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(3.2rem,5.8vw,5.8rem);line-height:1.06;color:var(--text);margin-bottom:1.6rem;max-width:820px;opacity:0;animation:fadeUp 0.7s ease 0.25s forwards;}
+.title em{font-style:normal;color:var(--cyan);}
+
+.sub{font-size:1rem;color:rgba(200,216,232,0.65);max-width:560px;line-height:1.95;margin-bottom:3rem;font-weight:300;opacity:0;animation:fadeUp 0.7s ease 0.4s forwards;}
+
+/* MODULE CARDS */
+.modules{display:flex;gap:1rem;flex-wrap:wrap;opacity:0;animation:fadeUp 0.7s ease 0.55s forwards;}
+
+.mod-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--rim);border-radius:6px;padding:1.5rem 1.75rem;width:280px;text-decoration:none;position:relative;overflow:hidden;backdrop-filter:blur(22px);transition:border-color 0.22s,background 0.22s,transform 0.22s;}
+.mod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,var(--rim2),transparent);}
+.mod-card:hover{transform:translateY(-2px);}
+.mod-atlas:hover{border-color:rgba(0,212,255,0.28);background:rgba(0,212,255,0.05);}
+.mod-live:hover{border-color:rgba(57,217,138,0.28);background:rgba(57,217,138,0.04);}
+
+.mod-tag{font-family:var(--mono);font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.85rem;}
+.mod-tag.atlas{color:var(--cyan);}
+.mod-tag.live{color:var(--green);}
+
+.mod-label{font-family:var(--serif);font-style:italic;font-weight:300;font-size:1.55rem;color:var(--text);line-height:1.2;margin-bottom:0.6rem;}
+
+.mod-desc{font-family:var(--mono);font-size:0.58rem;color:var(--muted);line-height:1.85;flex:1;margin-bottom:1.2rem;}
+
+.mod-arrow{font-family:var(--mono);font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:0.4rem;transition:color 0.2s,gap 0.2s;}
+.mod-atlas:hover .mod-arrow{color:var(--cyan);gap:0.7rem;}
+.mod-live:hover .mod-arrow{color:var(--green);gap:0.7rem;}
+
+/* FOOTER */
+.foot{position:fixed;bottom:1.5rem;left:3.5rem;right:5rem;display:flex;justify-content:space-between;align-items:flex-end;z-index:2;opacity:0;animation:fadeUp 0.7s ease 0.7s forwards;}
+.foot-left{font-family:var(--mono);font-size:0.5rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);line-height:2;}
+.foot-left a{color:var(--cyan);text-decoration:none;}
+.foot-right{font-family:var(--mono);font-size:0.5rem;color:var(--muted);text-align:right;line-height:2;}
+
+/* LIGHT THEME */
+html.light{--void:#f0f4f8;--glass:rgba(255,255,255,0.72);--glass2:rgba(248,251,255,0.90);--rim:rgba(0,100,180,0.12);--rim2:rgba(0,100,180,0.25);--fog:rgba(0,0,0,0.05);--text:#1a2a38;--muted:#7a9ab0;--dim:#c0d0dc;--cyan:#0066cc;--green:#007a44;}
+html.light body{background:var(--void);}
+html.light .sub{color:rgba(10,25,40,0.6);}
+
+/* THEME TOGGLE */
+.theme-toggle{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--glass2);border:1px solid var(--rim2);border-radius:4px;padding:0.55rem 0.9rem;font-family:var(--mono);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;backdrop-filter:blur(16px);transition:color 0.2s;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--void);}::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<canvas id="atmos-canvas"></canvas>
+
+<nav class="nav">
+  <div class="nav-logo">Strata<span> · Atmospheric Atlas · Valencia</span></div>
+  <div class="nav-right"><div class="nav-dot"></div>RVVCCA · Live</div>
+</nav>
+
+<div class="stage">
+
+  <div class="eyebrow">Environmental Data Science · Valencia · RVVCCA</div>
+
+  <h1 class="title">The atmosphere,<br>made <em>readable</em></h1>
+
+  <p class="sub">
+    Strata is a research platform for exploring air quality, pollutant transport,
+    and atmospheric events across the Valencia monitoring network —
+    from historical case studies to live station readings.
+  </p>
+
+  <div class="modules">
+
+    <a class="mod-card mod-atlas" href="strata_portfolio.html">
+      <div class="mod-tag atlas">Module A — Case Studies</div>
+      <div class="mod-label">Atmospheric<br>Atlas</div>
+      <div class="mod-desc">
+        2021–22 hourly dataset &amp; 2024 DANA period.<br>
+        CMPI divergence, calima events, ACI index,<br>
+        3D city visualizations &amp; correlation analysis.
+      </div>
+      <div class="mod-arrow">Open Atlas →</div>
+    </a>
+
+    <a class="mod-card mod-live" href="strata_live.html">
+      <div class="mod-tag live">Module B — Live Data</div>
+      <div class="mod-label">Live<br>Observatory</div>
+      <div class="mod-desc">
+        Real-time station readings from the RVVCCA network.<br>
+        Current pollutant levels, hourly time series,<br>
+        and interactive station map.
+      </div>
+      <div class="mod-arrow">Open Observatory →</div>
+    </a>
+
+  </div>
+
+</div>
+
+<footer class="foot">
+  <div class="foot-left">
+    <strong style="color:rgba(200,216,232,0.35)">Strata</strong> · Aaron Martinez · Environmental Sciences · UV<br>
+    Data: <a href="https://mediambient.gva.es" target="_blank">RVVCCA / GVA</a> ·
+    API: <a href="https://strata-l2et.onrender.com/api/health" target="_blank">Render</a>
+  </div>
+  <div class="foot-right">
+    strata-atmos.com<br>
+    <span style="color:var(--dim)">v0.2 · July 2026</span>
+  </div>
+</footer>
+
+<button class="theme-toggle" id="theme-toggle">☀ Light</button>
+
+<script>
+(function(){
+  const canvas=document.getElementById('atmos-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,particles=[],streams=[];
+  function wU(x,y){return -0.28+0.14*Math.sin(y/H*3.14+0.5)+0.07*Math.cos(x/W*6.28);}
+  function wV(x,y){return -0.58+0.18*Math.cos(x/W*3.14)+0.09*Math.sin(y/H*6.28);}
+  class P{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.age=0;this.maxAge=160+Math.random()*220;this.sp=0.55+Math.random()*0.75;const r=Math.random();this.c=r<0.55?[0,180,220]:r<0.78?[0,140,200]:r<0.91?[255,140,0]:[255,60,75];this.sz=0.7+Math.random()*0.75;}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.age++;if(this.age>this.maxAge||this.x<0||this.x>W||this.y<0||this.y>H)this.reset();}draw(){const l=this.age/this.maxAge;const a=l<0.1?l/0.1:l>0.85?(1-l)/0.15:1;const[r,g,b]=this.c;ctx.beginPath();ctx.arc(this.x,this.y,this.sz,0,6.28);ctx.fillStyle=`rgba(${r},${g},${b},${a*0.28})`;ctx.fill();}}
+  class S{constructor(){this.reset();}reset(){this.pts=[];this.x=Math.random()*W;this.y=Math.random()*H;this.maxPts=35+Math.floor(Math.random()*55);this.age=0;this.maxAge=280+Math.random()*380;this.sp=0.9+Math.random()*1.1;const r=Math.random();this.c=r<0.62?[0,200,240]:r<0.84?[0,155,195]:[255,150,0];}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.pts.push({x:this.x,y:this.y});if(this.pts.length>this.maxPts)this.pts.shift();this.age++;if(this.age>this.maxAge||this.x<-50||this.x>W+50||this.y<-50||this.y>H+50)this.reset();}draw(){if(this.pts.length<2)return;const l=this.age/this.maxAge;const a=l<0.08?l/0.08:l>0.88?(1-l)/0.12:1;const[r,g,b]=this.c;ctx.beginPath();ctx.moveTo(this.pts[0].x,this.pts[0].y);for(let i=1;i<this.pts.length;i++){const t=i/this.pts.length;ctx.strokeStyle=`rgba(${r},${g},${b},${a*t*0.2})`;ctx.lineWidth=0.5+t*0.4;ctx.lineTo(this.pts[i].x,this.pts[i].y);}ctx.stroke();}}
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;init();}
+  function init(){particles=Array.from({length:160},()=>new P());streams=Array.from({length:40},()=>{const s=new S();s.age=Math.floor(Math.random()*s.maxAge);return s;});}
+  function draw(){ctx.clearRect(0,0,W,H);streams.forEach(s=>{s.update();s.draw();});particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(draw);}
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+(function(){
+  const btn=document.getElementById('theme-toggle');
+  const html=document.documentElement;
+  if(localStorage.getItem('Strata-theme')==='light'){html.classList.add('light');btn.textContent='◑ Dark';}
+  btn.addEventListener('click',function(){const isLight=html.classList.toggle('light');btn.textContent=isLight?'◑ Dark':'☀ Light';localStorage.setItem('Strata-theme',isLight?'light':'dark');});
+})();
+</script>
+</body>
+</html>
