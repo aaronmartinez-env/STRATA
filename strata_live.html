@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata — Live Observatory · Valencia</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400;1,600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --void:#04060a;--deep:#070c12;--surface:#0c1420;
+  --glass:rgba(8,16,28,0.72);--glass2:rgba(10,18,32,0.88);
+  --rim:rgba(80,160,240,0.10);--rim2:rgba(80,160,240,0.22);
+  --fog:rgba(255,255,255,0.04);
+  --text:#c8d8e8;--muted:#3a5060;--dim:#1a2a38;
+  --cyan:#00d4ff;--teal:#00b896;--amber:#ff9a00;
+  --red:#ff4455;--green:#39d98a;--purple:#8b6fff;
+  --mono:'IBM Plex Mono',monospace;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+html{background:var(--void);color:var(--text);font-family:var(--sans);font-weight:300;font-size:17px;line-height:1.75;scroll-behavior:smooth;}
+body{overflow-x:hidden;}
+#atmos-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+body::before{content:'';position:fixed;inset:0;z-index:1;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:0.45;}
+.wrap{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 3.5rem;}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 2.5rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to bottom,rgba(4,6,10,0.96) 0%,transparent 100%);}
+.nav-logo{font-family:var(--mono);font-size:0.72rem;font-weight:700;letter-spacing:0.22em;color:var(--cyan);text-transform:uppercase;text-decoration:none;}
+.nav-logo span{color:var(--muted);font-weight:300;}
+.nav-links{display:flex;gap:1.75rem;align-items:center;}
+.nav-links a{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.nav-links a:hover{color:var(--cyan);}
+.nav-live{display:flex;align-items:center;gap:0.5rem;font-family:var(--mono);font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--green);}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.35;transform:scale(0.75);}}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:0 0 4rem;}
+.hero-eyebrow{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);margin-bottom:1.2rem;}
+.hero-title{font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(2.8rem,5.2vw,5rem);line-height:1.08;color:var(--text);margin-bottom:1.2rem;max-width:820px;}
+.hero-title em{font-style:normal;color:var(--green);}
+.hero-sub{font-size:1rem;color:rgba(200,216,232,0.65);max-width:620px;line-height:1.9;margin-bottom:2.5rem;font-weight:300;}
+.provisional-badge{display:inline-flex;align-items:center;gap:0.5rem;font-family:var(--mono);font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);background:rgba(255,154,0,0.08);border:1px solid rgba(255,154,0,0.2);border-radius:3px;padding:0.35rem 0.7rem;margin-bottom:2.5rem;}
+
+/* SECTION */
+.section{padding:5rem 0;border-top:1px solid var(--fog);scroll-margin-top:72px;}
+.sec-head{display:grid;grid-template-columns:44px 1fr;gap:2rem;align-items:start;margin-bottom:2.75rem;}
+.sec-num{font-family:var(--mono);font-size:0.53rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;padding-top:6px;}
+.sec-title{font-family:var(--serif);font-style:italic;font-weight:300;font-size:clamp(1.8rem,3vw,2.6rem);color:var(--text);line-height:1.18;}
+.sec-title em{font-style:normal;color:var(--green);}
+.sec-sub{display:block;font-family:var(--mono);font-style:normal;font-size:0.56rem;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase;margin-top:0.5rem;font-weight:300;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity 0.65s ease,transform 0.65s ease;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* ── CURRENT READINGS ── */
+.current-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1px;background:var(--rim);border:1px solid var(--rim);border-radius:5px;overflow:hidden;margin:1.5rem 0;}
+.current-card{background:var(--glass2);padding:1.1rem 1.25rem;transition:background 0.2s;cursor:pointer;}
+.current-card:hover,.current-card.selected{background:rgba(0,212,255,0.06);}
+.current-card.selected{border-left:2px solid var(--cyan);}
+.cc-name{font-family:var(--mono);font-size:0.65rem;font-weight:700;color:var(--cyan);margin-bottom:0.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.04em;}
+.cc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
+.cc-label{font-family:var(--mono);font-size:0.48rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.cc-val{font-family:var(--mono);font-size:0.72rem;font-weight:700;}
+.cc-foot{display:flex;justify-content:space-between;margin-top:0.6rem;padding-top:0.6rem;border-top:1px solid rgba(255,255,255,0.04);font-family:var(--mono);font-size:0.5rem;color:var(--muted);}
+
+/* Skeleton loading */
+.skeleton{background:linear-gradient(90deg,var(--dim) 25%,var(--surface) 50%,var(--dim) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:2px;height:12px;margin:3px 0;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton.tall{height:20px;}
+
+/* ── MAP ── */
+.map-wrap{position:relative;border-radius:5px;overflow:hidden;border:1px solid var(--rim);margin:1.5rem 0;}
+#live-map{height:440px;}
+.map-hud{position:absolute;top:1rem;left:1rem;z-index:500;background:var(--glass2);border:1px solid var(--rim);backdrop-filter:blur(16px);border-radius:4px;padding:0.7rem 0.9rem;min-width:130px;}
+.map-hud-label{font-family:var(--mono);font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem;}
+.ml-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.ml-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ml-row span{font-family:var(--mono);font-size:0.54rem;color:var(--muted);}
+
+/* ── 3D CITY ── */
+.city3d-wrap{position:relative;border-radius:5px;overflow:hidden;border:1px solid var(--rim);margin:1.5rem 0;background:#03050a;}
+.city3d-canvas-host{position:relative;height:480px;}
+.city3d-canvas-host canvas{width:100%;height:100%;display:block;cursor:grab;}
+.city3d-canvas-host canvas:active{cursor:grabbing;}
+.city3d-controls{display:flex;gap:0.4rem;margin-bottom:0.8rem;flex-wrap:wrap;}
+.city3d-metric-btn{font-family:var(--mono);font-size:0.52rem;letter-spacing:0.1em;text-transform:uppercase;background:var(--fog);border:1px solid var(--rim);border-radius:3px;color:var(--muted);padding:0.35rem 0.7rem;cursor:pointer;transition:all 0.15s;}
+.city3d-metric-btn:hover{color:var(--text);}
+.city3d-metric-btn.active{color:var(--green);background:rgba(57,217,138,0.08);border-color:rgba(57,217,138,0.3);}
+.city3d-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;background:#03050a;}
+.city3d-info{position:absolute;bottom:1rem;left:1rem;right:1rem;background:var(--glass2);border:1px solid var(--rim);border-radius:4px;padding:0.6rem 0.9rem;font-family:var(--mono);font-size:0.6rem;color:var(--text);display:none;backdrop-filter:blur(16px);}
+.city3d-minimap{position:absolute;bottom:1rem;right:1rem;width:120px;height:90px;border:1px solid var(--rim);border-radius:3px;overflow:hidden;z-index:10;}
+
+/* ── TIME SERIES ── */
+.ts-controls{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;margin-bottom:2rem;}
+.ts-station-sel{font-family:var(--mono);font-size:0.62rem;color:var(--text);background:var(--glass);border:1px solid var(--rim);border-radius:4px;padding:0.5rem 0.8rem;cursor:pointer;outline:none;min-width:200px;}
+.ts-station-sel option{background:var(--deep);}
+.range-panel{background:var(--glass);border:1px solid var(--rim);border-radius:5px;backdrop-filter:blur(22px);padding:0.9rem 1.2rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.range-label{font-family:var(--mono);font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+.range-presets{display:flex;gap:0.35rem;flex-wrap:wrap;}
+.range-preset-btn{font-family:var(--mono);font-size:0.54rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);background:var(--fog);border:1px solid var(--rim);border-radius:3px;padding:0.3rem 0.6rem;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+.range-preset-btn:hover{color:var(--text);}
+.range-preset-btn.active{color:var(--green);background:rgba(57,217,138,0.08);border-color:rgba(57,217,138,0.3);}
+.range-inputs{display:flex;align-items:center;gap:0.5rem;}
+.range-inputs input[type="date"]{font-family:var(--mono);font-size:0.6rem;color:var(--text);background:var(--fog);border:1px solid var(--rim);border-radius:3px;padding:0.3rem 0.5rem;color-scheme:dark;outline:none;}
+.range-sep{font-family:var(--mono);font-size:0.58rem;color:var(--muted);}
+
+/* CHART GROUP */
+.ts-groups{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+@media(max-width:720px){.ts-groups{grid-template-columns:1fr;}}
+.ts-group{background:var(--glass);border:1px solid var(--rim);border-radius:5px;padding:1.2rem;position:relative;}
+.ts-group::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,var(--rim2),transparent);}
+.ts-group-label{font-family:var(--mono);font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.85rem;}
+.ts-group canvas{max-height:200px;}
+.ts-empty{font-family:var(--mono);font-size:0.6rem;color:var(--muted);text-align:center;padding:2.5rem 0;opacity:0.5;}
+
+/* STATUS */
+.status-bar{display:flex;align-items:center;gap:1rem;font-family:var(--mono);font-size:0.55rem;color:var(--muted);margin-bottom:1rem;flex-wrap:wrap;}
+.status-bar span{letter-spacing:0.08em;}
+.status-ok{color:var(--green);}
+.status-loading{color:var(--amber);}
+.status-err{color:var(--red);}
+
+/* GLASS PANELS */
+.gp{background:var(--glass);border:1px solid var(--rim);border-radius:5px;backdrop-filter:blur(22px);padding:1.4rem;margin:1.2rem 0;position:relative;overflow:hidden;}
+.gp::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,var(--rim2),transparent);}
+.gp-label{font-family:var(--mono);font-size:0.53rem;letter-spacing:0.17em;text-transform:uppercase;color:var(--green);margin-bottom:0.5rem;}
+.gp p{font-size:0.95rem;color:rgba(200,216,232,0.88);line-height:1.78;margin:0;}
+
+/* FOOTER */
+.footer{border-top:1px solid var(--fog);padding:2.5rem 0;margin-top:4rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+.footer-col{font-family:var(--mono);font-size:0.55rem;color:var(--muted);line-height:2.2;}
+.footer-col a{color:var(--cyan);text-decoration:none;}
+
+/* LEAFLET */
+.leaflet-container{background:var(--deep)!important;font-family:var(--mono)!important;}
+.leaflet-popup-content-wrapper{background:rgba(10,18,32,0.95)!important;border:1px solid var(--rim)!important;border-radius:4px!important;backdrop-filter:blur(16px);color:var(--text)!important;box-shadow:none!important;}
+.leaflet-popup-tip{background:rgba(10,18,32,0.95)!important;}
+.leaflet-control-zoom{border:1px solid var(--rim)!important;background:rgba(10,18,32,0.9)!important;}
+.leaflet-control-zoom a{background:transparent!important;color:var(--muted)!important;border-bottom:1px solid var(--rim)!important;}
+.leaflet-control-zoom a:hover{color:var(--cyan)!important;}
+.leaflet-attribution-flag{display:none!important;}
+
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--void);}::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
+
+/* LIGHT THEME */
+html.light{--void:#f0f4f8;--deep:#e8eef4;--surface:#dde5ee;--glass:rgba(255,255,255,0.72);--glass2:rgba(248,251,255,0.90);--rim:rgba(0,100,180,0.12);--rim2:rgba(0,100,180,0.25);--fog:rgba(0,0,0,0.05);--text:#1a2a38;--muted:#7a9ab0;--dim:#c0d0dc;--cyan:#0066cc;--teal:#007a6a;--amber:#c06000;--red:#cc2233;--green:#007a44;--purple:#5533bb;}
+html.light body{background:var(--void);}
+html.light .nav{background:linear-gradient(to bottom,rgba(240,244,248,0.97) 0%,transparent 100%);}
+html.light .range-inputs input[type="date"]{color-scheme:light;}
+html.light .ts-station-sel option{background:#e8eef4;}
+html.light .city3d-wrap{background:#dde5ee;}
+html.light .city3d-loading{background:#dde5ee;}
+html.light .leaflet-container{background:#d8e4ef!important;}
+
+.theme-toggle{position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;background:var(--glass2);border:1px solid var(--rim2);border-radius:4px;padding:0.55rem 0.9rem;font-family:var(--mono);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);cursor:pointer;backdrop-filter:blur(16px);transition:color 0.2s;}
+</style>
+</head>
+<body>
+<canvas id="atmos-canvas"></canvas>
+
+<nav class="nav">
+  <a class="nav-logo" href="index.html">Strata<span> · Live Observatory</span></a>
+  <div class="nav-links">
+    <a href="#current">Current</a>
+    <a href="#map">Map</a>
+    <a href="#city3d">3D City</a>
+    <a href="#timeseries">Time Series</a>
+    <div class="nav-live"><div class="nav-dot"></div>RVVCCA Live</div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-eyebrow">Module B · Live Data · RVVCCA Network · Valencia</div>
+  <h1 class="hero-title">Seven stations.<br>One city's <em>air, now</em>.</h1>
+  <p class="hero-sub">Real-time readings from the RVVCCA monitoring network — NO₂, O₃, PM10, PM2.5 and meteorological variables across Valencia, updated hourly.</p>
+  <div class="provisional-badge">⚠ Data marked provisional — subject to official validation by GVA</div>
+</section>
+
+<!-- ── §1 CURRENT READINGS ── -->
+<section class="section reveal" id="current">
+  <div class="sec-head">
+    <div class="sec-num">01</div>
+    <div>
+      <h2 class="sec-title">Current <em>readings</em><span class="sec-sub">Latest available · All 7 stations</span></h2>
+    </div>
+  </div>
+  <div class="status-bar">
+    <span id="current-status" class="status-loading">⏳ Fetching live data — this may take ~20 seconds...</span>
+  </div>
+  <div class="current-grid" id="current-grid">
+    <!-- Skeleton cards -->
+    <div class="current-card" id="skel-0"><div class="skeleton tall" style="width:60%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-1"><div class="skeleton tall" style="width:55%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-2"><div class="skeleton tall" style="width:70%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-3"><div class="skeleton tall" style="width:50%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-4"><div class="skeleton tall" style="width:65%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-5"><div class="skeleton tall" style="width:60%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+    <div class="current-card" id="skel-6"><div class="skeleton tall" style="width:72%;margin-bottom:10px"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:75%"></div></div>
+  </div>
+</section>
+
+<!-- ── §2 MAP ── -->
+<section class="section reveal" id="map">
+  <div class="sec-head">
+    <div class="sec-num">02</div>
+    <div>
+      <h2 class="sec-title">Station <em>map</em><span class="sec-sub">Click a station to load its time series below</span></h2>
+    </div>
+  </div>
+  <div class="map-wrap">
+    <div class="map-hud">
+      <div class="map-hud-label">PM10 level</div>
+      <div class="ml-row"><div class="ml-dot" style="background:#00d4ff"></div><span>Low · &lt;20</span></div>
+      <div class="ml-row"><div class="ml-dot" style="background:#ff9a00"></div><span>Moderate · 20–40</span></div>
+      <div class="ml-row"><div class="ml-dot" style="background:#ff4455"></div><span>High · &gt;40</span></div>
+    </div>
+    <div id="live-map"></div>
+  </div>
+</section>
+
+<!-- ── §3 3D CITY ── -->
+<section class="section reveal" id="city3d">
+  <div class="sec-head">
+    <div class="sec-num">03</div>
+    <div>
+      <h2 class="sec-title">3D city <em>view</em><span class="sec-sub">Drag to rotate · Scroll to zoom · Click a bar for details</span></h2>
+    </div>
+  </div>
+  <div class="gp">
+    <div class="gp-label">About this view</div>
+    <p>Each bar represents a monitoring station, positioned at its real geographic coordinates. Bar height encodes the selected pollutant's current reading. Uses the same spatial engine as the Atlas case studies, now driven by live data.</p>
+  </div>
+  <div class="city3d-controls" id="city3d-controls">
+    <button class="city3d-metric-btn active" data-metric="pm10">PM10</button>
+    <button class="city3d-metric-btn" data-metric="no2">NO₂</button>
+    <button class="city3d-metric-btn" data-metric="o3">O₃</button>
+    <button class="city3d-metric-btn" data-metric="nox">NOx</button>
+    <button class="city3d-metric-btn" data-metric="so2">SO₂</button>
+    <button class="city3d-metric-btn" data-metric="pm25">PM2.5</button>
+  </div>
+  <div class="city3d-wrap">
+    <div class="city3d-canvas-host" id="city3d-host">
+      <canvas id="city3d-canvas"></canvas>
+      <div class="city3d-loading" id="city3d-loading">Waiting for live data...</div>
+      <div class="city3d-info" id="city3d-info"></div>
+      <div class="city3d-minimap" id="city3d-minimap"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── §4 TIME SERIES ── -->
+<section class="section reveal" id="timeseries">
+  <div class="sec-head">
+    <div class="sec-num">04</div>
+    <div>
+      <h2 class="sec-title">Hourly <em>time series</em><span class="sec-sub">Select a station and date range</span></h2>
+    </div>
+  </div>
+
+  <div class="ts-controls">
+    <select class="ts-station-sel" id="ts-station">
+      <option value="">— Select station —</option>
+    </select>
+    <span id="ts-status" style="font-family:var(--mono);font-size:0.55rem;color:var(--muted)"></span>
+  </div>
+
+  <div class="range-panel">
+    <span class="range-label">Range</span>
+    <div class="range-presets">
+      <button class="range-preset-btn active" data-days="7">7 days</button>
+      <button class="range-preset-btn" data-days="14">14 days</button>
+      <button class="range-preset-btn" data-days="30">30 days</button>
+      <button class="range-preset-btn" data-days="0">Custom</button>
+    </div>
+    <div class="range-inputs">
+      <input type="date" id="ts-from">
+      <span class="range-sep">—</span>
+      <input type="date" id="ts-to">
+    </div>
+  </div>
+
+  <div id="ts-groups-wrap">
+    <div class="ts-empty" id="ts-placeholder">Select a station above to load its time series.</div>
+    <div class="ts-groups" id="ts-groups" style="display:none">
+      <div class="ts-group">
+        <div class="ts-group-label">Nitrogen · NO₂ / NO / NOx</div>
+        <canvas id="ts-nitrogen"></canvas>
+      </div>
+      <div class="ts-group">
+        <div class="ts-group-label">Oxidants · O₃ / SO₂</div>
+        <canvas id="ts-oxidants"></canvas>
+      </div>
+      <div class="ts-group">
+        <div class="ts-group-label">Particles · PM10 / PM2.5 / CO</div>
+        <canvas id="ts-particles"></canvas>
+      </div>
+      <div class="ts-group">
+        <div class="ts-group-label">Meteorology · Temp / Wind / Precip</div>
+        <canvas id="ts-meteo"></canvas>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <div class="footer-col">
+    <strong style="color:rgba(200,216,232,0.38)">Strata Live Observatory</strong><br>
+    Aaron Martinez · Environmental Sciences · UV<br>
+    <a href="index.html">← Back to Strata</a>
+  </div>
+  <div class="footer-col" style="text-align:right">
+    Data source: <a href="https://mediambient.gva.es" target="_blank">RVVCCA / GVA</a><br>
+    API: <a href="https://strata-l2et.onrender.com/api/health" target="_blank">strata-l2et.onrender.com</a><br>
+    All readings provisional
+  </div>
+</footer>
+
+</div><!-- .wrap -->
+
+<button class="theme-toggle" id="theme-toggle">☀ Light</button>
+
+<script>
+const API = 'https://strata-l2et.onrender.com';
+const fmt = (v, d=1) => v != null ? Number(v).toFixed(d) : '—';
+const gc = 'rgba(255,255,255,0.03)';
+
+// ── COLOR HELPERS ──────────────────────────────────────────────────────────────
+function pm10Color(v){ return v < 20 ? '#00d4ff' : v < 40 ? '#ff9a00' : '#ff4455'; }
+function no2Color(v){ return v < 40 ? '#00d4ff' : v < 100 ? '#ff9a00' : '#ff4455'; }
+
+// ── STATIONS ──────────────────────────────────────────────────────────────────
+let STATIONS = [];
+let currentData = [];    // from /api/current
+let liveMap = null;
+let city3dScene = null;
+let tsCharts = {};
+let selectedStation = null;
+
+async function loadStations(){
+  const res = await fetch(`${API}/api/stations`);
+  const d = await res.json();
+  STATIONS = d.stations || [];
+
+  // Populate time series selector
+  const sel = document.getElementById('ts-station');
+  STATIONS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.code; opt.textContent = s.name;
+    sel.appendChild(opt);
+  });
+
+  // Build map
+  buildMap();
+
+  // Set default date range (last 7 days)
+  setPreset(7);
+}
+
+// ── CURRENT READINGS ──────────────────────────────────────────────────────────
+async function loadCurrent(){
+  const statusEl = document.getElementById('current-status');
+  try {
+    const res = await fetch(`${API}/api/current`);
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    currentData = d.stations || d.current || [];
+
+    renderCurrentCards();
+    statusEl.className = 'status-ok';
+    statusEl.textContent = `✓ Live data loaded · ${new Date().toLocaleTimeString('es-ES')}`;
+
+    // Build 3D once we have current data
+    build3D(currentData, 'pm10');
+
+  } catch(e){
+    statusEl.className = 'status-err';
+    statusEl.textContent = `✗ Could not load live data — ${e.message}`;
+    document.getElementById('city3d-loading').textContent = 'Live data unavailable.';
+  }
+}
+
+function renderCurrentCards(){
+  const grid = document.getElementById('current-grid');
+  grid.innerHTML = '';
+  currentData.forEach(s => {
+    const pm10 = s.pm10 ?? s.pm10_mean;
+    const no2  = s.no2  ?? s.no2_mean;
+    const o3   = s.o3   ?? s.o3_mean;
+    const temp = s.temperature ?? s.temp;
+    const c    = pm10Color(pm10 || 0);
+    const div  = document.createElement('div');
+    div.className = 'current-card' + (selectedStation === s.code ? ' selected' : '');
+    div.dataset.code = s.code || s.station_code;
+    div.innerHTML = `
+      <div class="cc-name">${s.name || s.station || s.station_name}</div>
+      <div class="cc-row"><span class="cc-label">PM10</span><span class="cc-val" style="color:${c}">${fmt(pm10,0)} <span style="font-size:0.5rem;color:var(--muted)">µg/m³</span></span></div>
+      <div class="cc-row"><span class="cc-label">NO₂</span><span class="cc-val" style="color:${no2Color(no2||0)}">${fmt(no2,0)}</span></div>
+      <div class="cc-row"><span class="cc-label">O₃</span><span class="cc-val">${fmt(o3,0)}</span></div>
+      <div class="cc-foot"><span>Temp ${fmt(temp,1)} °C</span><span style="color:var(--dim)">provisional</span></div>`;
+    div.addEventListener('click', () => selectStation(div.dataset.code));
+    grid.appendChild(div);
+  });
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+function buildMap(){
+  liveMap = L.map('live-map', {
+    zoomControl:true, scrollWheelZoom:false, attributionControl:false
+  }).setView([39.466, -0.368], 12);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(liveMap);
+  L.control.attribution({position:'bottomright',prefix:''})
+    .addAttribution('<span style="font-family:monospace;font-size:10px;color:#3a5060">© OpenStreetMap © CARTO</span>')
+    .addTo(liveMap);
+
+  STATIONS.forEach(s => {
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="width:14px;height:14px;border-radius:50%;background:#3a5060;border:1.5px solid rgba(0,212,255,0.4);cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.transform='scale(1.4)';this.style.background='#00d4ff'"
+        onmouseout="this.style.transform='';this.style.background='#3a5060'"></div>`,
+      iconSize:[14,14], iconAnchor:[7,7]
+    });
+    L.marker([s.lat, s.lon], {icon}).addTo(liveMap)
+      .bindPopup(`<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c8d8e8;min-width:140px">
+        <div style="color:#00d4ff;font-weight:700;margin-bottom:4px">${s.name}</div>
+        <div style="color:#3a5060">Code <span style="color:#c8d8e8;float:right">${s.code}</span></div>
+        <div style="color:#3a5060">Lat <span style="color:#c8d8e8;float:right">${s.lat}</span></div>
+        <div style="color:#3a5060">Lon <span style="color:#c8d8e8;float:right">${s.lon}</span></div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
+          <span style="color:#39d98a;cursor:pointer" onclick="selectStation('${s.code}');document.getElementById('timeseries').scrollIntoView({behavior:'smooth'})">→ Load time series</span>
+        </div></div>`, {maxWidth:220, className:'strata-popup'})
+      .on('click', () => selectStation(s.code));
+  });
+}
+
+// Update map markers once current data arrives
+function updateMapWithCurrent(){
+  if (!liveMap || !currentData.length) return;
+  // Re-render markers with pm10 color
+  liveMap.eachLayer(l => { if (l instanceof L.Marker) liveMap.removeLayer(l); });
+
+  const maxPM10 = Math.max(...currentData.map(s => s.pm10 || 0), 1);
+  currentData.forEach(s => {
+    if (!s.lat && !s.latitude) return;
+    const lat = s.lat || s.latitude;
+    const lon = s.lon || s.longitude;
+    const pm10 = s.pm10 || s.pm10_mean || 0;
+    const c = pm10Color(pm10);
+    const r = 8 + (pm10 / maxPM10) * 6;
+    const code = s.code || s.station_code;
+    const name = s.name || s.station || s.station_name;
+
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="width:${r*2}px;height:${r*2}px;border-radius:50%;background:${c};opacity:0.8;border:1px solid rgba(255,255,255,0.12);cursor:pointer;transition:all 0.15s"
+        onmouseover="this.style.opacity='1';this.style.transform='scale(1.2)'"
+        onmouseout="this.style.opacity='0.8';this.style.transform=''"></div>`,
+      iconSize:[r*2,r*2], iconAnchor:[r,r]
+    });
+    L.marker([lat, lon], {icon}).addTo(liveMap)
+      .bindPopup(`<div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c8d8e8;min-width:155px">
+        <div style="color:#00d4ff;font-weight:700;margin-bottom:5px">${name}</div>
+        <div style="color:#3a5060">PM10 <span style="color:${c};float:right;font-weight:700">${fmt(pm10,0)} µg/m³</span></div>
+        <div style="color:#3a5060">NO₂ <span style="color:#c8d8e8;float:right">${fmt(s.no2,0)}</span></div>
+        <div style="color:#3a5060">O₃ <span style="color:#c8d8e8;float:right">${fmt(s.o3,0)}</span></div>
+        <div style="color:#3a5060">Temp <span style="color:#c8d8e8;float:right">${fmt(s.temperature ?? s.temp,1)} °C</span></div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
+          <span style="color:#39d98a;cursor:pointer" onclick="selectStation('${code}');document.getElementById('timeseries').scrollIntoView({behavior:'smooth'})">→ Load time series</span>
+        </div></div>`, {maxWidth:220})
+      .on('click', () => selectStation(code));
+  });
+}
+
+// ── 3D CITY ───────────────────────────────────────────────────────────────────
+function project3d(lat,lon,cLat,cLon,scale){
+  return {x:(lon-cLon)*scale*Math.cos(cLat*Math.PI/180), z:-(lat-cLat)*scale};
+}
+
+function build3D(stations, metric){
+  const canvas = document.getElementById('city3d-canvas');
+  const host   = document.getElementById('city3d-host');
+  const loadEl = document.getElementById('city3d-loading');
+
+  // Filter stations with coordinates
+  const valid = stations.filter(s => (s.lat||s.latitude) && (s.lon||s.longitude));
+  if (!valid.length){ loadEl.textContent='No coordinates available.'; return; }
+
+  // If scene already exists, just rebuild bars
+  if (city3dScene){ city3dScene.buildBars(metric); return; }
+
+  loadEl.style.display = 'none';
+
+  const cLat = valid.reduce((a,s)=>a+(s.lat||s.latitude),0)/valid.length;
+  const cLon = valid.reduce((a,s)=>a+(s.lon||s.longitude),0)/valid.length;
+  const SCALE = 420;
+
+  const positioned = valid.map(s => {
+    const p = project3d(s.lat||s.latitude, s.lon||s.longitude, cLat, cLon, SCALE);
+    return { ...s, x3d:p.x, z3d:p.z,
+      name: s.name||s.station||s.station_name,
+      code: s.code||s.station_code };
+  });
+
+  const W = host.clientWidth, H = host.clientHeight;
+  const scene    = new THREE.Scene();
+  scene.fog      = new THREE.Fog(0x03050a, 22, 55);
+  const camera   = new THREE.PerspectiveCamera(42, W/H, 0.1, 100);
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setSize(W, H, false);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+
+  // Ground plane
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(60,60),
+    new THREE.MeshBasicMaterial({color:0x03050a, transparent:true, opacity:0.6})
+  );
+  ground.rotation.x = -Math.PI/2; scene.add(ground);
+
+  // Grid lines
+  const gridHelper = new THREE.GridHelper(60,30,0x0a1828,0x0a1828);
+  scene.add(gridHelper);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x8ab4cc, 0.7));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(8,14,8); scene.add(dirLight);
+
+  let barMeshes = [];
+  const barGroup = new THREE.Group(); scene.add(barGroup);
+
+  function colorFor(val, m){
+    if (m==='pm10')  return val<20 ? 0x00d4ff : val<40 ? 0xff9a00 : 0xff4455;
+    if (m==='no2')   return val<40 ? 0x00d4ff : val<100? 0xff9a00 : 0xff4455;
+    if (m==='o3')    return val<60 ? 0x00d4ff : val<120? 0xff9a00 : 0xff4455;
+    return val < 20  ? 0x00d4ff : val < 50 ? 0xff9a00 : 0xff4455;
+  }
+
+  function buildBars(m){
+    barGroup.clear(); barMeshes=[];
+    const vals = positioned.map(s => s[m] || 0);
+    const maxVal = Math.max(...vals, 1);
+    positioned.forEach(s => {
+      const val = s[m] || 0;
+      const h   = Math.max(0.05, (val/maxVal) * 8);
+      const col = colorFor(val, m);
+      const mat = new THREE.MeshStandardMaterial({color:col, transparent:true, opacity:0.88, roughness:0.35, metalness:0.1});
+      const geo = new THREE.BoxGeometry(0.9, h, 0.9);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(s.x3d, h/2, s.z3d);
+      mesh.userData = {...s, metricVal:val, metricKey:m};
+      barGroup.add(mesh); barMeshes.push(mesh);
+
+      // Glow ring
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.55, 0.75, 16),
+        new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0.22, side:THREE.DoubleSide})
+      );
+      ring.rotation.x = -Math.PI/2; ring.position.set(s.x3d, 0.02, s.z3d);
+      barGroup.add(ring);
+    });
+  }
+  buildBars(metric);
+
+  // Raycaster for click
+  const raycaster = new THREE.Raycaster();
+  const mouse     = new THREE.Vector2();
+  const infoEl    = document.getElementById('city3d-info');
+  canvas.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+    mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(barMeshes);
+    if (hits.length){
+      const d = hits[0].object.userData;
+      infoEl.style.display='block';
+      infoEl.innerHTML = `<strong style="color:var(--cyan)">${d.name}</strong> &nbsp;·&nbsp; ${d.metricKey.toUpperCase()} <strong style="color:var(--green)">${fmt(d.metricVal,1)}</strong> µg/m³ &nbsp;·&nbsp; <span style="color:var(--muted);cursor:pointer" onclick="selectStation('${d.code}');document.getElementById('timeseries').scrollIntoView({behavior:'smooth'})">→ time series</span>`;
+    } else { infoEl.style.display='none'; }
+  });
+
+  // Orbit controls
+  let isDragging=false, prevX=0, prevY=0, rotY=0.6, rotX=0.55, dist=30;
+  canvas.addEventListener('pointerdown', e=>{isDragging=true;prevX=e.clientX;prevY=e.clientY;});
+  window.addEventListener('pointerup',  ()=>isDragging=false);
+  window.addEventListener('pointermove', e=>{
+    if(!isDragging) return;
+    rotY+=(e.clientX-prevX)*0.005; rotX+=(e.clientY-prevY)*0.004;
+    rotX=Math.max(0.15,Math.min(1.3,rotX));
+    prevX=e.clientX; prevY=e.clientY;
+  });
+  canvas.addEventListener('wheel', e=>{
+    e.preventDefault(); dist+=e.deltaY*0.015; dist=Math.max(10,Math.min(48,dist));
+  },{passive:false});
+
+  function animate(){
+    requestAnimationFrame(animate);
+    camera.position.x = Math.sin(rotY)*dist*Math.cos(rotX-0.5);
+    camera.position.z = Math.cos(rotY)*dist*Math.cos(rotX-0.5);
+    camera.position.y = Math.sin(rotX)*dist*0.9+2;
+    camera.lookAt(0,1.5,0);
+    renderer.render(scene,camera);
+  }
+  animate();
+
+  window.addEventListener('resize',()=>{
+    const w=host.clientWidth, h2=host.clientHeight;
+    renderer.setSize(w,h2,false);
+    camera.aspect=w/h2; camera.updateProjectionMatrix();
+  });
+
+  // Minimap
+  const mm = document.getElementById('city3d-minimap');
+  if (mm && typeof L !== 'undefined'){
+    const mmap = L.map(mm,{zoomControl:false,attributionControl:false,
+      dragging:false,scrollWheelZoom:false,doubleClickZoom:false}).setView([cLat,cLon],13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19}).addTo(mmap);
+    positioned.forEach(s=>{
+      L.circleMarker([s.lat||s.latitude,s.lon||s.longitude],{radius:4,color:'#00d4ff',weight:1,fillColor:'#00d4ff',fillOpacity:0.85}).addTo(mmap);
+    });
+    setTimeout(()=>mmap.invalidateSize(),200);
+  }
+
+  city3dScene = {buildBars, barMeshes};
+}
+
+// Metric switcher
+document.querySelectorAll('.city3d-metric-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.city3d-metric-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if (city3dScene) city3dScene.buildBars(btn.dataset.metric);
+  });
+});
+
+// ── TIME SERIES ───────────────────────────────────────────────────────────────
+function isoDate(d){ return d.toISOString().split('T')[0]; }
+
+function setPreset(days){
+  document.querySelectorAll('.range-preset-btn').forEach(b=>b.classList.toggle('active', +b.dataset.days===days));
+  if (!days) return; // custom — don't change inputs
+  const to   = new Date();
+  const from = new Date(); from.setDate(from.getDate()-days);
+  document.getElementById('ts-to').value   = isoDate(to);
+  document.getElementById('ts-from').value = isoDate(from);
+}
+
+document.querySelectorAll('.range-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const days = +btn.dataset.days;
+    setPreset(days);
+    if (selectedStation && days > 0) loadTimeSeries(selectedStation);
+  });
+});
+
+document.getElementById('ts-from').addEventListener('change', () => {
+  setPreset(0);
+  if (selectedStation) loadTimeSeries(selectedStation);
+});
+document.getElementById('ts-to').addEventListener('change', () => {
+  setPreset(0);
+  if (selectedStation) loadTimeSeries(selectedStation);
+});
+
+document.getElementById('ts-station').addEventListener('change', function(){
+  if (this.value) selectStation(this.value);
+});
+
+function selectStation(code){
+  selectedStation = code;
+  document.getElementById('ts-station').value = code;
+
+  // Highlight selected card
+  document.querySelectorAll('.current-card').forEach(c=>{
+    c.classList.toggle('selected', c.dataset.code === code);
+  });
+
+  loadTimeSeries(code);
+}
+
+async function loadTimeSeries(code){
+  const from   = document.getElementById('ts-from').value;
+  const to     = document.getElementById('ts-to').value;
+  const status = document.getElementById('ts-status');
+
+  if (!from || !to){ status.textContent='Set a date range first.'; return; }
+
+  status.textContent = '⏳ Loading...';
+  document.getElementById('ts-placeholder').style.display='none';
+  document.getElementById('ts-groups').style.display='grid';
+
+  // Destroy old charts
+  Object.values(tsCharts).forEach(c=>c.destroy());
+  tsCharts={};
+
+  try {
+    const res = await fetch(`${API}/api/hourly?station=${code}&from=${from}&to=${to}`);
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    const readings = d.readings || [];
+
+    if (!readings.length){
+      status.textContent='No data for this range.';
+      return;
+    }
+
+    const labels = readings.map(r=>r.datetime);
+    const opts   = (color) => ({
+      responsive:true, maintainAspectRatio:true, aspectRatio:2.5,
+      animation:{duration:400},
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,labels:{font:{family:'IBM Plex Mono',size:9},color:'rgba(200,216,232,0.5)',boxWidth:12,padding:8}}},
+      scales:{
+        x:{grid:{color:gc},ticks:{font:{family:'IBM Plex Mono',size:8},color:'rgba(200,216,232,0.4)',maxTicksLimit:8,maxRotation:0}},
+        y:{grid:{color:gc},ticks:{font:{family:'IBM Plex Mono',size:8},color:'rgba(200,216,232,0.4)'},beginAtZero:false}
+      }
+    });
+
+    const ds = (key,label,color) => ({
+      label, data: readings.map(r=>r[key]??null),
+      borderColor:color, backgroundColor:color+'18',
+      borderWidth:1.5, pointRadius:0, pointHoverRadius:4,
+      fill:false, tension:0.3, spanGaps:true
+    });
+
+    tsCharts.nitrogen = new Chart(document.getElementById('ts-nitrogen'), {
+      type:'line',
+      data:{labels, datasets:[ds('no2','NO₂','#ff4455'),ds('no','NO','#ff9a00'),ds('nox','NOx','#ff6b35')]},
+      options: opts()
+    });
+    tsCharts.oxidants = new Chart(document.getElementById('ts-oxidants'), {
+      type:'line',
+      data:{labels, datasets:[ds('o3','O₃','#00d4ff'),ds('so2','SO₂','#8b6fff')]},
+      options: opts()
+    });
+    tsCharts.particles = new Chart(document.getElementById('ts-particles'), {
+      type:'line',
+      data:{labels, datasets:[ds('pm10','PM10','#ff9a00'),ds('pm25','PM2.5','#ffd580'),ds('co','CO (×10)','#39d98a').data && null].filter(Boolean)},
+      options: opts()
+    });
+    // CO scaled ×10 for visibility
+    const coDs = ds('co','CO ×10','#39d98a');
+    coDs.data = readings.map(r=>r.co!=null?r.co*10:null);
+    tsCharts.particles.data.datasets.push(coDs);
+    tsCharts.particles.update();
+
+    tsCharts.meteo = new Chart(document.getElementById('ts-meteo'), {
+      type:'line',
+      data:{labels, datasets:[ds('temperature','Temp °C','#00b896'),ds('wind_speed','Wind m/s','#c8d8e8'),ds('precipitation','Precip mm','#8b6fff')]},
+      options: opts()
+    });
+
+    const station = STATIONS.find(s=>s.code===code);
+    status.textContent = `✓ ${readings.length} hourly readings · ${station?.name||code} · ${from} → ${to}`;
+
+  } catch(e){
+    status.textContent = `✗ Error: ${e.message}`;
+  }
+}
+
+// ── ATMOSPHERIC CANVAS ────────────────────────────────────────────────────────
+(function(){
+  const canvas=document.getElementById('atmos-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,particles=[],streams=[];
+  function wU(x,y){return -0.28+0.14*Math.sin(y/H*3.14+0.5)+0.07*Math.cos(x/W*6.28);}
+  function wV(x,y){return -0.58+0.18*Math.cos(x/W*3.14)+0.09*Math.sin(y/H*6.28);}
+  class P{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.age=0;this.maxAge=160+Math.random()*220;this.sp=0.55+Math.random()*0.75;const r=Math.random();this.c=r<0.55?[0,180,220]:r<0.78?[0,140,200]:r<0.91?[255,140,0]:[255,60,75];this.sz=0.7+Math.random()*0.75;}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.age++;if(this.age>this.maxAge||this.x<0||this.x>W||this.y<0||this.y>H)this.reset();}draw(){const l=this.age/this.maxAge;const a=l<0.1?l/0.1:l>0.85?(1-l)/0.15:1;const[r,g,b]=this.c;ctx.beginPath();ctx.arc(this.x,this.y,this.sz,0,6.28);ctx.fillStyle=`rgba(${r},${g},${b},${a*0.28})`;ctx.fill();}}
+  class S{constructor(){this.reset();}reset(){this.pts=[];this.x=Math.random()*W;this.y=Math.random()*H;this.maxPts=35+Math.floor(Math.random()*55);this.age=0;this.maxAge=280+Math.random()*380;this.sp=0.9+Math.random()*1.1;const r=Math.random();this.c=r<0.62?[0,200,240]:r<0.84?[0,155,195]:[255,150,0];}update(){this.x+=wU(this.x,this.y)*this.sp;this.y+=wV(this.x,this.y)*this.sp;this.pts.push({x:this.x,y:this.y});if(this.pts.length>this.maxPts)this.pts.shift();this.age++;if(this.age>this.maxAge||this.x<-50||this.x>W+50||this.y<-50||this.y>H+50)this.reset();}draw(){if(this.pts.length<2)return;const l=this.age/this.maxAge;const a=l<0.08?l/0.08:l>0.88?(1-l)/0.12:1;const[r,g,b]=this.c;ctx.beginPath();ctx.moveTo(this.pts[0].x,this.pts[0].y);for(let i=1;i<this.pts.length;i++){const t=i/this.pts.length;ctx.strokeStyle=`rgba(${r},${g},${b},${a*t*0.2})`;ctx.lineWidth=0.5+t*0.4;ctx.lineTo(this.pts[i].x,this.pts[i].y);}ctx.stroke();}}
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;init();}
+  function init(){particles=Array.from({length:160},()=>new P());streams=Array.from({length:40},()=>{const s=new S();s.age=Math.floor(Math.random()*s.maxAge);return s;});}
+  function draw(){ctx.clearRect(0,0,W,H);streams.forEach(s=>{s.update();s.draw();});particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(draw);}
+  window.addEventListener('resize',resize);resize();draw();
+})();
+
+// ── SCROLL REVEAL ─────────────────────────────────────────────────────────────
+const obs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+},{threshold:0.06,rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+// ── THEME TOGGLE ──────────────────────────────────────────────────────────────
+(function(){
+  const btn=document.getElementById('theme-toggle');
+  const html=document.documentElement;
+  if(localStorage.getItem('Strata-theme')==='light'){html.classList.add('light');btn.textContent='◑ Dark';}
+  btn.addEventListener('click',function(){const isLight=html.classList.toggle('light');btn.textContent=isLight?'◑ Dark':'☀ Light';localStorage.setItem('Strata-theme',isLight?'light':'dark');});
+})();
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(async function init(){
+  await loadStations();
+  // Fire current readings fetch in background — doesn't block the rest
+  loadCurrent().then(()=>{ updateMapWithCurrent(); });
+})();
+</script>
+</body>
+</html>
