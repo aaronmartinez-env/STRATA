@@ -1,127 +1,98 @@
-/* STRATA Live Observatory Styles */
-
-.live-wrap { 
-  max-width: 1200px; 
-  margin: 0 auto; 
-  padding: 4rem 3.5rem; 
-  background: var(--void); 
-  color: var(--text); 
+/* Live.css */
+.live-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  color: var(--text);
 }
 
-.live-section { 
-  padding: 5rem 0; 
-  border-top: 1px solid rgba(255,255,255,0.04); 
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.section-num {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.section-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 2.5rem;
 }
 
-.sec-head { 
-  display: grid; 
-  grid-template-columns: 44px 1fr; 
-  gap: 2rem; 
-  align-items: start; 
-  margin-bottom: 2.75rem; 
+/* Controls */
+.controls-container {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.control-label {
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.glass-input {
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  color: var(--text);
+  padding: 0.5rem;
+  font-family: var(--mono);
 }
 
-.sec-num { 
-  font-family: 'IBM Plex Mono', monospace; 
-  font-size: 0.53rem; 
-  letter-spacing: 0.15em; 
-  color: var(--muted); 
-  text-transform: uppercase; 
-  padding-top: 6px; 
+/* Grids & Cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
 }
-
-.sec-title { 
-  font-family: 'Cormorant Garamond', serif; 
-  font-style: italic; 
-  font-weight: 300; 
-  font-size: 2.6rem; 
-  color: var(--text); 
-  line-height: 1.18; 
-  margin: 0;
+.station-card {
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  padding: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
 }
+.station-card:hover { border-color: var(--cyan); }
 
-.sec-title em { 
-  font-style: normal; 
-  color: var(--green); 
+/* Skeletons */
+.skeleton-card {
+  height: 100px;
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
 }
-
-.glass-panel { 
-  background: var(--glass); 
-  border: 1px solid var(--rim); 
-  border-radius: 5px; 
-  padding: 1.4rem; 
-  backdrop-filter: blur(22px); 
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  animation: shimmer 1.5s infinite;
 }
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-.gp-label { 
-  font-family: 'IBM Plex Mono', monospace; 
-  font-size: 0.53rem; 
-  letter-spacing: 0.17em; 
-  text-transform: uppercase; 
-  color: var(--muted); 
-  margin-bottom: 0.85rem; 
+/* Chart Containers */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
 }
-
-.current-grid { 
-  display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
-  gap: 1px; 
-  background: var(--rim); 
-  border: 1px solid var(--rim); 
-  border-radius: 5px; 
-  overflow: hidden; 
-}
-
-.current-card { 
-  background: #070c12; 
-  padding: 1.1rem 1.25rem; 
-  transition: background 0.2s; 
-  cursor: pointer; 
-}
-
-.current-card:hover, .current-card.selected { 
-  background: rgba(0, 212, 255, 0.06); 
-}
-
-.cc-name { 
-  font-family: 'IBM Plex Mono', monospace; 
-  font-size: 0.65rem; 
-  font-weight: 700; 
-  color: var(--cyan); 
-  margin-bottom: 0.65rem; 
-}
-
-.cc-label { 
-  font-family: 'IBM Plex Mono', monospace; 
-  font-size: 0.48rem; 
-  color: var(--muted); 
-  text-transform: uppercase; 
-}
-
-.cc-val { 
-  font-family: 'IBM Plex Mono', monospace; 
-  font-size: 0.72rem; 
-  font-weight: 700; 
-}
-
-.chart-grid { 
-  display: grid; 
-  grid-template-columns: 1fr 1fr; 
-  gap: 1rem; 
-}
-
-.skeleton { 
-  background: linear-gradient(90deg, #1a2a38 25%, #0c1420 50%, #1a2a38 75%); 
-  background-size: 200% 100%; 
-  animation: shimmer 1.4s infinite; 
-  border-radius: 2px; 
-  height: 12px; 
-  margin: 6px 0; 
-}
-
-.skeleton.tall { height: 20px; }
-
-@keyframes shimmer { 
-  0% { background-position: 200% 0; } 
-  100% { background-position: -200% 0; } 
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  border-radius: 5px;
+  padding: 1.5rem;
 }
