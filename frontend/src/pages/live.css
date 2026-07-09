@@ -1,0 +1,12 @@
+.live-wrap { max-width: 1200px; margin: 0 auto; padding: 0 3.5rem; background: var(--void); color: var(--text); }
+.live-section { padding: 5rem 0; border-top: 1px solid var(--fog); }
+.sec-head { display: grid; grid-template-columns: 44px 1fr; gap: 2rem; align-items: start; margin-bottom: 2.75rem; }
+.sec-num { font-family: var(--mono); font-size: 0.53rem; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+.sec-title { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 2.6rem; }
+.sec-title em { font-style: normal; color: var(--green); }
+.glass-panel { background: var(--glass); border: 1px solid var(--rim); border-radius: 5px; padding: 1.4rem; backdrop-filter: blur(22px); }
+.current-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1px; background: var(--rim); border: 1px solid var(--rim); border-radius: 5px; }
+.current-card { background: var(--deep); padding: 1.1rem; cursor: pointer; }
+.skeleton { background: linear-gradient(90deg, #070c12 25%, #1a2a38 50%, #070c12 75%); animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* ... Add the rest of the styles from my previous response ... */
