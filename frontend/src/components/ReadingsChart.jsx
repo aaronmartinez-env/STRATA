@@ -9,20 +9,33 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-// Fields we can plot, mapped to a friendly label + color for the legend/lines.
+// Fields we can plot, mapped to a friendly label + a genuinely distinct
+// color per field (no repeats — important once several fields are
+// plotted together, e.g. via the "All" preset).
 export const PLOTTABLE_FIELDS = {
-  pm25: { label: 'PM2.5', unit: 'µg/m³', color: '#ff9a00' },
-  pm10: { label: 'PM10', unit: 'µg/m³', color: '#ff4455' },
-  no2: { label: 'NO2', unit: 'µg/m³', color: '#00d4ff' },
-  no: { label: 'NO', unit: 'µg/m³', color: '#8b6fff' },
-  nox: { label: 'NOx', unit: 'µg/m³', color: '#39d98a' },
-  o3: { label: 'O3', unit: 'µg/m³', color: '#00d4ff' },
-  so2: { label: 'SO2', unit: 'µg/m³', color: '#ff9a00' },
-  co: { label: 'CO', unit: 'mg/m³', color: '#ff4455' },
-  temperature: { label: 'Temp', unit: '°C', color: '#ff9a00' },
-  wind_speed: { label: 'Wind', unit: 'm/s', color: '#39d98a' },
-  precipitation: { label: 'Precip', unit: 'mm', color: '#00d4ff' },
-  humidity: { label: 'Humidity', unit: '%', color: '#8b6fff' },
+  pm25: { label: 'PM2.5', unit: 'µg/m³', color: '#ff9a3c', who24h: 15 },
+  pm10: { label: 'PM10', unit: 'µg/m³', color: '#ff4d5e', who24h: 45 },
+  no2: { label: 'NO2', unit: 'µg/m³', color: '#00c2ff', who24h: 25 },
+  no: { label: 'NO', unit: 'µg/m³', color: '#9d7bff' },
+  nox: { label: 'NOx', unit: 'µg/m³', color: '#33d182' },
+  o3: { label: 'O3', unit: 'µg/m³', color: '#1fb8b8' },
+  so2: { label: 'SO2', unit: 'µg/m³', color: '#f2d94e', who24h: 40 },
+  co: { label: 'CO', unit: 'mg/m³', color: '#e0459b', who24h: 4 },
+  temperature: { label: 'Temp', unit: '°C', color: '#f4784a' },
+  wind_speed: { label: 'Wind', unit: 'm/s', color: '#2fbf8f' },
+  precipitation: { label: 'Precip', unit: 'mm', color: '#3f7fd6' },
+  humidity: { label: 'Humidity', unit: '%', color: '#b366e0' },
+};
+
+// Concrete hex fallbacks for chart axes/grid — deliberately NOT using
+// CSS var(--x) here. Recharts' SVG gets cloned and serialized into a
+// standalone <img> for PNG export, which loses access to the page's
+// :root custom properties, silently rendering those strokes invisible.
+export const CHART_COLORS = {
+  grid: '#16202b',
+  axis: '#5c7386',
+  tooltipBg: '#0a1016',
+  tooltipBorder: '#16202b',
 };
 
 function formatTick(isoString) {

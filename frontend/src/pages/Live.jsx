@@ -14,6 +14,12 @@ function defaultDateRange() {
   return { from: iso(from), to: iso(to) };
 }
 
+function shiftYears(dateStr, years) {
+  const d = new Date(dateStr);
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function Live() {
   const [stations, setStations] = useState([]);
   const [station, setStation] = useState('');
@@ -24,16 +30,21 @@ export default function Live() {
   const [currentSnapshot, setCurrentSnapshot] = useState([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
 
-  // Fetch station list once
+  // Compare mode
+  const [compareOn, setCompareOn] = useState(false);
+  const [compareType, setCompareType] = useState('station'); // 'station' | 'lastyear'
+  const [compareStation, setCompareStation] = useState('');
+  const [compareReadings, setCompareReadings] = useState([]);
+  const [compareLoading, setCompareLoading] = useState(false);
+
   useEffect(() => {
     fetchStations().then((data) => {
       setStations(data.stations);
       if (data.stations.length > 0) setStation(data.stations[0].code);
+      if (data.stations.length > 1) setCompareStation(data.stations[1].code);
     });
   }, []);
 
-  // Fetch current snapshot (all stations, latest reading) — for the
-  // overview grid and the 3D view. Independent of the selected station.
   const loadSnapshot = useCallback(() => {
     setSnapshotLoading(true);
     fetchCurrent()
@@ -43,7 +54,6 @@ export default function Live() {
 
   useEffect(() => { loadSnapshot(); }, [loadSnapshot]);
 
-  // Fetch hourly time series for the selected station + date range
   const loadReadings = useCallback(() => {
     if (!station) return;
     setLoading(true);
@@ -56,14 +66,31 @@ export default function Live() {
 
   useEffect(() => { loadReadings(); }, [loadReadings]);
 
+  // Compare data fetch — either another station over the same range,
+  // or the same station shifted back exactly one year.
+  useEffect(() => {
+    if (!compareOn || !station) {
+      setCompareReadings([]);
+      return;
+    }
+    setCompareLoading(true);
+    const params = compareType === 'station'
+      ? { station: compareStation, from: dateRange.from, to: dateRange.to }
+      : { station, from: shiftYears(dateRange.from, -1), to: shiftYears(dateRange.to, -1) };
+
+    fetchHourly(params)
+      .then((data) => setCompareReadings(data.readings))
+      .catch(() => setCompareReadings([]))
+      .finally(() => setCompareLoading(false));
+  }, [compareOn, compareType, compareStation, station, dateRange]);
+
   const selectedStationName = stations.find((s) => s.code === station)?.name ?? station;
+  const compareStationName = stations.find((s) => s.code === compareStation)?.name ?? compareStation;
+  const compareLabel = compareType === 'station' ? compareStationName : 'Last year';
 
   return (
     <div className="live-wrap">
 
-      {/* 01: Current Readings — a read-only snapshot of all stations.
-          This does NOT control which station the time-series below
-          shows; use the "Station" dropdown in section 03 for that. */}
       <section className="live-section">
         <div className="sec-head">
           <div className="sec-num">01</div>
@@ -99,7 +126,6 @@ export default function Live() {
         </div>
       </section>
 
-      {/* 02: 3D View */}
       <section className="live-section">
         <div className="sec-head"><div className="sec-num">02</div><h2 className="sec-title">3D city <em>view</em></h2></div>
         <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
@@ -107,8 +133,6 @@ export default function Live() {
         </div>
       </section>
 
-      {/* 03: Controls & time series — the sole place to pick station,
-          date range, and pollutants for the chart below. */}
       <section className="live-section">
         <div className="sec-head"><div className="sec-num">03</div><h2 className="sec-title">Controls <em>& time series</em></h2></div>
         <div className="live-controls">
@@ -128,13 +152,55 @@ export default function Live() {
           </div>
         </div>
 
+        <div className="compare-bar">
+          <label className="compare-toggle">
+            <input type="checkbox" checked={compareOn} onChange={(e) => setCompareOn(e.target.checked)} />
+            <span className="live-label">Compare</span>
+          </label>
+
+          {compareOn && (
+            <>
+              <div className="control-group">
+                <select className="live-input" value={compareType} onChange={(e) => setCompareType(e.target.value)}>
+                  <option value="station">vs another station</option>
+                  <option value="lastyear">vs same period last year</option>
+                </select>
+              </div>
+              {compareType === 'station' && (
+                <div className="control-group">
+                  <select className="live-input" value={compareStation} onChange={(e) => setCompareStation(e.target.value)}>
+                    {stations.filter((s) => s.code !== station).map((s) => (
+                      <option key={s.code} value={s.code}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {compareLoading && <span className="live-label">Loading comparison…</span>}
+            </>
+          )}
+        </div>
+
         {loading && <p className="status-loading">Loading readings…</p>}
         {error && !loading && <p className="status-error">{error}</p>}
 
         {!loading && !error && (
-          <MultiFieldChart readings={readings} station={selectedStationName} dateRange={dateRange} />
+          <MultiFieldChart
+            readings={readings}
+            station={selectedStationName}
+            dateRange={dateRange}
+            compareReadings={compareOn ? compareReadings : null}
+            compareLabel={compareLabel}
+          />
         )}
       </section>
+
+      <footer className="live-attribution">
+        Data: RVVCCA hourly network via{' '}
+        <a href="https://rvvcca.pica.gva.es" target="_blank" rel="noreferrer">rvvcca.pica.gva.es</a>
+        {' '}(Generalitat Valenciana) · fetched live through STRATA's own proxy —{' '}
+        <a href="https://opendata.vlci.valencia.es" target="_blank" rel="noreferrer">opendata.vlci.valencia.es</a>
+        {' '}for historical bulk downloads. CC BY 4.0.
+      </footer>
     </div>
   );
 }

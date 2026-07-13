@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { PLOTTABLE_FIELDS } from './ReadingsChart';
+import { PLOTTABLE_FIELDS, CHART_COLORS } from './ReadingsChart';
 
 const PRESETS = {
   Nitrogen: ['no2', 'no', 'nox'],
@@ -16,8 +16,13 @@ function formatTick(isoString) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+function elapsedHours(datetimeStr, startMs) {
+  return Math.round((new Date(datetimeStr).getTime() - startMs) / 3600000);
+}
+
 function downloadChartPNG(containerEl, filename) {
-  const svg = containerEl?.querySelector('svg');
+  if (!containerEl) return;
+  const svg = containerEl.querySelector('svg.recharts-surface');
   if (!svg) return;
 
   const clone = svg.cloneNode(true);
@@ -29,14 +34,16 @@ function downloadChartPNG(containerEl, filename) {
   const img = new Image();
   img.onload = () => {
     const scale = 2;
+    const width = svg.clientWidth || svg.viewBox?.baseVal?.width || 800;
+    const height = svg.clientHeight || svg.viewBox?.baseVal?.height || 400;
     const canvas = document.createElement('canvas');
-    canvas.width = svg.clientWidth * scale;
-    canvas.height = svg.clientHeight * scale;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#04060a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.scale(scale, scale);
-    ctx.drawImage(img, 0, 0, svg.clientWidth, svg.clientHeight);
+    ctx.drawImage(img, 0, 0, width, height);
     URL.revokeObjectURL(url);
     canvas.toBlob((blob) => {
       const a = document.createElement('a');
@@ -46,6 +53,7 @@ function downloadChartPNG(containerEl, filename) {
       URL.revokeObjectURL(a.href);
     });
   };
+  img.onerror = () => URL.revokeObjectURL(url);
   img.src = url;
 }
 
@@ -61,14 +69,40 @@ function downloadCSV(readings, fields, filename) {
   URL.revokeObjectURL(a.href);
 }
 
-function Chart({ readings, fields, height }) {
-  const chartData = readings
-    .filter((r) => r.datetime)
-    .map((r) => {
-      const point = { datetime: r.datetime };
+function Chart({ readings, fields, height, compareReadings, compareLabel, showThresholds }) {
+  const isComparing = compareReadings && compareReadings.length > 0;
+
+  let chartData;
+  let xKey = 'datetime';
+
+  if (isComparing) {
+    xKey = 'elapsed';
+    const startA = new Date(readings.find((r) => r.datetime)?.datetime ?? Date.now()).getTime();
+    const startB = new Date(compareReadings.find((r) => r.datetime)?.datetime ?? Date.now()).getTime();
+
+    const byElapsed = new Map();
+    readings.filter((r) => r.datetime).forEach((r) => {
+      const e = elapsedHours(r.datetime, startA);
+      const point = byElapsed.get(e) ?? { elapsed: e };
       fields.forEach((f) => { point[f] = r[f] ?? null; });
-      return point;
+      byElapsed.set(e, point);
     });
+    compareReadings.filter((r) => r.datetime).forEach((r) => {
+      const e = elapsedHours(r.datetime, startB);
+      const point = byElapsed.get(e) ?? { elapsed: e };
+      fields.forEach((f) => { point[`${f}__cmp`] = r[f] ?? null; });
+      byElapsed.set(e, point);
+    });
+    chartData = Array.from(byElapsed.values()).sort((a, b) => a.elapsed - b.elapsed);
+  } else {
+    chartData = readings
+      .filter((r) => r.datetime)
+      .map((r) => {
+        const point = { datetime: r.datetime };
+        fields.forEach((f) => { point[f] = r[f] ?? null; });
+        return point;
+      });
+  }
 
   const hasAnyValue = chartData.some((row) => fields.some((f) => row[f] != null));
 
@@ -91,47 +125,92 @@ function Chart({ readings, fields, height }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--rim)" />
-        <XAxis dataKey="datetime" tickFormatter={formatTick} minTickGap={50} stroke="var(--muted)" style={{ fontSize: '0.65rem', fontFamily: 'var(--mono)' }} />
-        <YAxis stroke="var(--muted)" style={{ fontSize: '0.65rem', fontFamily: 'var(--mono)' }} />
-        <Tooltip
-          labelFormatter={(v) => new Date(v).toLocaleString()}
-          contentStyle={{ background: 'var(--deep)', border: '1px solid var(--rim)', fontFamily: 'var(--mono)', fontSize: '0.7rem' }}
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+        <XAxis
+          dataKey={xKey}
+          tickFormatter={isComparing ? (h) => `+${h}h` : formatTick}
+          minTickGap={50}
+          stroke={CHART_COLORS.axis}
+          style={{ fontSize: '0.65rem', fontFamily: 'var(--mono)' }}
         />
-        <Legend wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: '0.65rem' }} />
+        <YAxis stroke={CHART_COLORS.axis} style={{ fontSize: '0.65rem', fontFamily: 'var(--mono)' }} />
+        <Tooltip
+          labelFormatter={(v) => (isComparing ? `+${v}h from range start` : new Date(v).toLocaleString())}
+          contentStyle={{ background: CHART_COLORS.tooltipBg, border: `1px solid ${CHART_COLORS.tooltipBorder}`, fontFamily: 'var(--mono)', fontSize: '0.7rem' }}
+        />
+        <Legend wrapperStyle={{ fontFamily: 'var(--mono)', fontSize: '0.6rem' }} />
+
         {fields.map((f) => (
           <Line
             key={f}
             type="monotone"
             dataKey={f}
-            name={`${PLOTTABLE_FIELDS[f]?.label ?? f} (${PLOTTABLE_FIELDS[f]?.unit ?? ''})`}
+            name={isComparing ? `${PLOTTABLE_FIELDS[f]?.label ?? f} (A)` : `${PLOTTABLE_FIELDS[f]?.label ?? f} (${PLOTTABLE_FIELDS[f]?.unit ?? ''})`}
             stroke={PLOTTABLE_FIELDS[f]?.color ?? '#00d4ff'}
             dot={false}
             strokeWidth={1.5}
             connectNulls
           />
         ))}
+
+        {isComparing && fields.map((f) => (
+          <Line
+            key={`${f}__cmp`}
+            type="monotone"
+            dataKey={`${f}__cmp`}
+            name={`${PLOTTABLE_FIELDS[f]?.label ?? f} (${compareLabel})`}
+            stroke={PLOTTABLE_FIELDS[f]?.color ?? '#00d4ff'}
+            strokeDasharray="5 4"
+            strokeOpacity={0.7}
+            dot={false}
+            strokeWidth={1.5}
+            connectNulls
+          />
+        ))}
+
+        {showThresholds && !isComparing && fields
+          .filter((f) => PLOTTABLE_FIELDS[f]?.who24h != null)
+          .map((f) => (
+            <ReferenceLine
+              key={`who-${f}`}
+              y={PLOTTABLE_FIELDS[f].who24h}
+              stroke={PLOTTABLE_FIELDS[f].color}
+              strokeDasharray="2 3"
+              strokeOpacity={0.5}
+              label={{ value: `WHO 24h · ${PLOTTABLE_FIELDS[f].label}`, fontSize: 10, fill: PLOTTABLE_FIELDS[f].color, position: 'insideTopRight' }}
+            />
+          ))}
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-export default function MultiFieldChart({ readings, station, dateRange }) {
+export default function MultiFieldChart({
+  readings, station, dateRange,
+  compareReadings, compareLabel,
+}) {
   const [fields, setFields] = useState(['pm10', 'no2', 'o3']);
+  const [showThresholds, setShowThresholds] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const containerRef = useRef(null);
-  const expandedRef = useRef(null);
+  const expandedContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e) => { if (e.key === 'Escape') setExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
 
   const toggleField = (f) => {
     setFields((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
   };
 
   const applyPreset = (keys) => setFields(keys);
-
   const filename = `strata_${station}_${dateRange.from}_to_${dateRange.to}`;
 
-  return (
-    <div className="glass-panel" style={{ padding: '1.25rem' }}>
+  const Toolbar = ({ targetRef }) => (
+    <>
       <div className="mfc-toolbar">
         <div className="mfc-presets">
           {Object.entries(PRESETS).map(([label, keys]) => (
@@ -141,20 +220,21 @@ export default function MultiFieldChart({ readings, station, dateRange }) {
           ))}
           <button onClick={() => applyPreset(Object.keys(PLOTTABLE_FIELDS))}>All</button>
           <button onClick={() => applyPreset([])}>Clear</button>
+          <button
+            onClick={() => setShowThresholds((v) => !v)}
+            className={showThresholds ? 'active' : ''}
+            disabled={!!compareReadings?.length}
+            title={compareReadings?.length ? 'Not available while comparing' : 'Show WHO 24h guideline lines'}
+          >
+            WHO lines
+          </button>
         </div>
         <div className="mfc-actions">
-          <button onClick={() => downloadChartPNG(containerRef.current, `${filename}.png`)} disabled={fields.length === 0}>
-            PNG
-          </button>
-          <button onClick={() => downloadCSV(readings, fields, `${filename}.csv`)} disabled={fields.length === 0}>
-            CSV
-          </button>
-          <button onClick={() => setExpanded(true)} disabled={fields.length === 0}>
-            Expand
-          </button>
+          <button onClick={() => downloadChartPNG(targetRef.current, filename + '.png')} disabled={fields.length === 0}>PNG</button>
+          <button onClick={() => downloadCSV(readings, fields, filename + '.csv')} disabled={fields.length === 0}>CSV</button>
+          {!expanded && <button onClick={() => setExpanded(true)} disabled={fields.length === 0}>Expand</button>}
         </div>
       </div>
-
       <div className="mfc-chips">
         {Object.entries(PLOTTABLE_FIELDS).map(([key, meta]) => (
           <button
@@ -167,20 +247,26 @@ export default function MultiFieldChart({ readings, station, dateRange }) {
           </button>
         ))}
       </div>
+    </>
+  );
 
+  return (
+    <div className="glass-panel" style={{ padding: '1.25rem' }}>
+      <Toolbar targetRef={containerRef} />
       <div ref={containerRef}>
-        <Chart readings={readings} fields={fields} height={320} />
+        <Chart readings={readings} fields={fields} height={320} compareReadings={compareReadings} compareLabel={compareLabel} showThresholds={showThresholds} />
       </div>
 
       {expanded && (
         <div className="mfc-overlay" onClick={() => setExpanded(false)}>
           <div className="mfc-overlay-panel glass-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mfc-overlay-head">
-              <span className="gp-label">{station} · {dateRange.from} → {dateRange.to}</span>
-              <button onClick={() => setExpanded(false)}>Close ✕</button>
+              <span className="gp-label">{station} · {dateRange.from} to {dateRange.to}</span>
+              <button className="mfc-close" onClick={() => setExpanded(false)}>Close (Esc)</button>
             </div>
-            <div ref={expandedRef}>
-              <Chart readings={readings} fields={fields} height={520} />
+            <Toolbar targetRef={expandedContainerRef} />
+            <div ref={expandedContainerRef}>
+              <Chart readings={readings} fields={fields} height={560} compareReadings={compareReadings} compareLabel={compareLabel} showThresholds={showThresholds} />
             </div>
           </div>
         </div>
