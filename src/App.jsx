@@ -13,9 +13,9 @@ export default function App() {
       <Route path="/" element={<RootLayout />}>
         <Route index element={<Home />} />
         <Route path="live" element={<Live />} />
+        <Route path="wind" element={<Wind />} />
         <Route path="case-studies/valencia-2021-2022" element={<CaseStudyValencia />} />
         <Route path="case-studies/dana-2024" element={<CaseStudyDana />} />
-        <Route path="wind" element={<Wind />} />
       </Route>
     </Routes>
   );
