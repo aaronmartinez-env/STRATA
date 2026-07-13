@@ -130,25 +130,30 @@ export default function RootLayout() {
       <header className="app-header">
         <NavLink to="/" className="brand">
           Strata<span className="brand-sub"> · Atmospheric Atlas · Valencia</span>
-        </NavLink>
         <nav className="main-nav">
-          <NavLink
-            to="/live"
-            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-          >
-            Live
-          </NavLink>
-          <NavLink
-            to="/case-studies/valencia-2021-2022"
-            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-          >
-            Case Studies
-          </NavLink>
-          <div className="nav-live">
-            <div className="nav-dot" />
-            RVVCCA
-          </div>
-        </nav>
+  <NavLink
+    to="/live"
+    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+  >
+    Live
+  </NavLink>
+  <NavLink
+    to="/wind"
+    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+  >
+    Wind
+  </NavLink>
+  <NavLink
+    to="/case-studies/valencia-2021-2022"
+    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+  >
+    Case Studies
+  </NavLink>
+  <div className="nav-live">
+    <div className="nav-dot" />
+    RVVCCA
+  </div>
+</nav>
       </header>
 
       <main className="app-content">
