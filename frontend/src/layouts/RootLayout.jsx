@@ -129,7 +129,8 @@ export default function RootLayout() {
 
       <header className="app-header">
         <NavLink to="/" className="brand">
-          Strata<span className="brand-sub"> · Atmospheric Atlas · Valencia</span>
+  Strata<span className="brand-sub"> · Atmospheric Atlas · Valencia</span>
+</NavLink>
         <nav className="main-nav">
   <NavLink
     to="/live"
