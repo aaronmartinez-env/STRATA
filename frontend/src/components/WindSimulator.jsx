@@ -40,13 +40,32 @@ function normaliseStation(s) {
   };
 }
 
-// ── Particle factory ──────────────────────────────────────────────────────────
-function makeParticle(cx, cy, spread = 40) {
+// ── Particle factory — receptor model ─────────────────────────────────────────
+// Particles spawn on the upwind boundary and travel downwind toward the station.
+// U/V are the wind vector components (east, north in geographic coords).
+// In canvas coords: x increases east, y increases south — so V is inverted.
+function makeReceptorParticle(W, H, U, V) {
+  const absU = Math.abs(U);
+  const absV = Math.abs(V);
+  const total = absU + absV || 1;
+  const r = Math.random() * total;
+  let x, y;
+
+  if (r < absU) {
+    // Spawn on left edge if wind blows east (U>0), right edge if west (U<0)
+    x = U > 0 ? -15 + Math.random() * 10 : W + 5 + Math.random() * 10;
+    y = Math.random() * H;
+  } else {
+    // Spawn on top edge if wind blows south in canvas (V<0), bottom if north (V>0)
+    x = Math.random() * W;
+    y = V < 0 ? -15 + Math.random() * 10 : H + 5 + Math.random() * 10;
+  }
+
   return {
-    x:      cx + (Math.random() - 0.5) * spread,
-    y:      cy + (Math.random() - 0.5) * spread,
-    age:    Math.floor(Math.random() * 180),   // stagger so they don't all expire together
-    maxAge: 180 + Math.random() * 140,
+    x,
+    y,
+    age:    Math.floor(Math.random() * 60), // small stagger to avoid wave effect
+    maxAge: 400 + Math.random() * 200,
   };
 }
 
@@ -236,13 +255,20 @@ export default function WindSimulator() {
       return { x: W / 2, y: H / 2 };
     }
 
-    // FIX 1: initialise particles at canvas centre (not 0,0)
-    // They'll snap to the correct station position within one frame
+    // Initialise particles spread across the canvas so it looks populated immediately.
+    // They'll be recycled to upwind edges as they age out.
     const W0 = canvas.width;
     const H0 = canvas.height;
-    particleRef.current = Array.from({ length: N_PARTICLES }, () =>
-      makeParticle(W0 / 2, H0 / 2, Math.max(W0, H0) * 0.4)
-    );
+    const initRad = (stateRef.current.windAngle * Math.PI) / 180;
+    const initU = Math.sin(initRad);
+    const initV = Math.cos(initRad);
+    particleRef.current = Array.from({ length: N_PARTICLES }, (_, i) => {
+      // Half spawn randomly across canvas (immediate visual), half on upwind edge
+      if (i < N_PARTICLES / 2) {
+        return { x: Math.random() * W0, y: Math.random() * H0, age: Math.random() * 300, maxAge: 400 + Math.random() * 200 };
+      }
+      return makeReceptorParticle(W0, H0, initU, initV);
+    });
 
     function tick() {
       const W = canvas.width;
@@ -293,22 +319,47 @@ export default function WindSimulator() {
 
       if (!running) { rafRef.current = requestAnimationFrame(tick); return; }
 
-      // Particles
+      // ── Receptor particle system ──────────────────────────────────────────
+      // Particles travel FROM upwind boundary TOWARD the station (receptor).
+      // They "die" (get recycled) when they reach the station's vicinity,
+      // simulating capture by the sensor.
+      const CAPTURE_RADIUS = 14;  // px — how close before "captured"
       const colBase = speedToColor(ws);
+
       particleRef.current.forEach(p => {
         p.x += U * 0.55;
-        p.y -= V * 0.55;
+        p.y -= V * 0.55;  // V inverted: canvas y increases downward
         p.age++;
 
-        if (p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20 || p.age > p.maxAge) {
-          Object.assign(p, makeParticle(sx, sy, 30));
+        const dx = p.x - sx;
+        const dy = p.y - sy;
+        const distToStation = Math.sqrt(dx * dx + dy * dy);
+
+        // Captured by receptor — recycle to upwind boundary
+        if (distToStation < CAPTURE_RADIUS) {
+          // Brief flash effect: draw a tiny burst at capture point
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,212,255,0.6)';
+          ctx.fill();
+          Object.assign(p, makeReceptorParticle(W, H, U, V));
           return;
         }
 
-        const life = 1 - p.age / p.maxAge;
+        // Drifted offscreen without reaching station — recycle
+        if (p.x < -30 || p.x > W + 30 || p.y < -30 || p.y > H + 30 || p.age > p.maxAge) {
+          Object.assign(p, makeReceptorParticle(W, H, U, V));
+          return;
+        }
+
+        // Fade in near spawn, fade out near station for depth effect
+        const normalDist = Math.min(distToStation / (Math.max(W, H) * 0.5), 1);
+        const ageFade = Math.min(p.age / 40, 1); // fade in over first 40 frames
+        const alpha = ageFade * (0.2 + normalDist * 0.55);
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, 1.4, 0, Math.PI * 2);
-        ctx.fillStyle = `${colBase}${(life * 0.75).toFixed(2)})`;
+        ctx.fillStyle = `${colBase}${alpha.toFixed(2)})`;
         ctx.fill();
       });
 
@@ -383,7 +434,7 @@ export default function WindSimulator() {
         {/* Map legend */}
         <div className={styles.legend}>
           <div className={styles.legendRow}><span style={{background:'rgba(0,180,220,0.5)'}} className={styles.legendDot}/> Coastline</div>
-          <div className={styles.legendRow}><span style={{background:'rgba(0,212,255,0.9)'}} className={styles.legendDot}/> Active station</div>
+          <div className={styles.legendRow}><span style={{background:'rgba(0,212,255,0.9)'}} className={styles.legendDot}/> Receptor station</div>
           <div className={styles.legendRow}><span style={{background:'rgba(58,80,96,0.85)'}} className={styles.legendDot}/> Station</div>
         </div>
       </div>
@@ -392,7 +443,7 @@ export default function WindSimulator() {
       <div className={styles.controls}>
 
         <div className={styles.controlGroup}>
-          <label className={styles.label}>Emission Source</label>
+          <label className={styles.label}>Receptor Station</label>
           <select className={styles.select} value={sourceCode} onChange={e => setSourceCode(e.target.value)}>
             {stations.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
           </select>
@@ -450,7 +501,8 @@ export default function WindSimulator() {
       </div>
 
       <div className={styles.disclaimer}>
-        Particles represent dispersion direction only — not concentration or AQI. Wind data is provisional (RVVCCA / GVA).
+        Particles represent ambient air mass transport toward the receptor station — not concentration or AQI.
+        The station captures pollutants arriving from the upwind direction. Wind data is provisional (RVVCCA / GVA).
       </div>
 
     </div>
