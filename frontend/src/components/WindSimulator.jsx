@@ -2,15 +2,10 @@
  * WindSimulator.jsx
  * Strata — Atmospheric Wind & Dispersion Simulator
  *
- * A 2D canvas-based particle system that visualises pollutant dispersion
- * across Valencia based on real or manually-adjusted wind conditions.
- *
- * Props: none (fetches its own data via the Strata API)
- *
  * ── LIVE DATA CONNECTION ──────────────────────────────────────────────────────
- * Wind values come from /api/current → station.wind_speed / station.wind_direction
- * Station coordinates come from /api/stations → station.lat / station.lon
- * To swap data source: update API_BASE and the field names in normaliseStation()
+ * Wind values: /api/current → station.wind_speed / station.wind_direction
+ * Coordinates: /api/stations → station.lat / station.lon
+ * To swap fields: update normaliseStation() below
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -19,77 +14,173 @@ import { fetchStations, fetchCurrent } from '../api';
 import styles from './WindSimulator.module.css';
 
 // ── Geographic projection ─────────────────────────────────────────────────────
-// Projects lat/lon onto a canvas plane centred on Valencia.
 const REF_LAT = 39.4699;
 const REF_LON = -0.3763;
 const M_PER_DEG_LAT = 111_320;
+const ZOOM = 0.014;
 
-function project(lat, lon, canvasW, canvasH, zoom = 0.012) {
+function project(lat, lon, W, H) {
   const mx = (lon - REF_LON) * M_PER_DEG_LAT * Math.cos((REF_LAT * Math.PI) / 180);
   const my = (lat - REF_LAT) * M_PER_DEG_LAT;
   return {
-    x: canvasW / 2 + mx * zoom,
-    y: canvasH / 2 - my * zoom,
+    x: W / 2 + mx * ZOOM,
+    y: H / 2 - my * ZOOM,
   };
 }
 
-// ── Normalise API station object ──────────────────────────────────────────────
-// ↓ LIVE DATA CONNECTION — update field names here if the API shape changes
+// ── Normalise API station ─────────────────────────────────────────────────────
 function normaliseStation(s) {
   return {
-    code:       s.code       ?? s.station_code,
-    name:       s.name       ?? s.station      ?? s.station_name,
-    lat:        s.lat        ?? s.latitude,
-    lon:        s.lon        ?? s.longitude,
-    windSpeed:  s.wind_speed ?? s.windSpeed     ?? null,   // m/s
-    windDir:    s.wind_direction ?? s.windDir   ?? null,   // degrees (met convention)
+    code:      s.code           ?? s.station_code,
+    name:      s.name           ?? s.station        ?? s.station_name,
+    lat:       s.lat            ?? s.latitude,
+    lon:       s.lon            ?? s.longitude,
+    windSpeed: s.wind_speed     ?? s.windSpeed       ?? null,
+    windDir:   s.wind_direction ?? s.windDir         ?? null,
   };
 }
 
 // ── Particle factory ──────────────────────────────────────────────────────────
-function makeParticle(cx, cy, spread = 60) {
+function makeParticle(cx, cy, spread = 40) {
   return {
-    x:   cx + (Math.random() - 0.5) * spread,
-    y:   cy + (Math.random() - 0.5) * spread,
-    age: Math.random() * 200,
-    maxAge: 180 + Math.random() * 120,
+    x:      cx + (Math.random() - 0.5) * spread,
+    y:      cy + (Math.random() - 0.5) * spread,
+    age:    Math.floor(Math.random() * 180),   // stagger so they don't all expire together
+    maxAge: 180 + Math.random() * 140,
   };
 }
 
-// ── Colour helpers ────────────────────────────────────────────────────────────
+// ── Speed → colour ────────────────────────────────────────────────────────────
 function speedToColor(speed) {
-  // 0 m/s → cyan, 5 m/s → amber, 10+ m/s → red
   const t = Math.min(speed / 10, 1);
   if (t < 0.5) {
     const u = t / 0.5;
     return `rgba(${Math.round(u * 255)},${Math.round(212 - u * 62)},${Math.round(255 - u * 255)},`;
-  } else {
-    const u = (t - 0.5) / 0.5;
-    return `rgba(255,${Math.round(154 - u * 154)},0,`;
   }
+  const u = (t - 0.5) / 0.5;
+  return `rgba(255,${Math.round(154 - u * 154)},0,`;
 }
 
-const N_PARTICLES = 300;
+// ── Stylised Valencia geography (canvas paths) ────────────────────────────────
+// All points are [lat, lon] projected at runtime — no hardcoded pixels.
+// Approximate outlines only; enough for geographic context.
+
+// Mediterranean coastline (north→south along the Valencia coast)
+const COAST_POINTS = [
+  [39.620, -0.235], [39.580, -0.218], [39.520, -0.210],
+  [39.480, -0.215], [39.450, -0.220], [39.410, -0.230],
+  [39.370, -0.245], [39.330, -0.260],
+];
+
+// Turia river rough path (west→east to the sea)
+const TURIA_POINTS = [
+  [39.490, -0.520], [39.488, -0.480], [39.482, -0.440],
+  [39.476, -0.400], [39.470, -0.370], [39.468, -0.330],
+  [39.465, -0.290], [39.462, -0.260], [39.460, -0.230],
+];
+
+// Valencia city rough boundary (simplified polygon)
+const CITY_POINTS = [
+  [39.510, -0.420], [39.510, -0.340], [39.490, -0.310],
+  [39.460, -0.320], [39.445, -0.360], [39.450, -0.430],
+  [39.470, -0.450], [39.490, -0.445],
+];
+
+// L'Albufera lake (south of city)
+const ALBUFERA_POINTS = [
+  [39.380, -0.345], [39.360, -0.330], [39.340, -0.335],
+  [39.330, -0.355], [39.345, -0.375], [39.370, -0.370],
+];
+
+function drawGeography(ctx, W, H) {
+  function path(pts, close = false) {
+    if (!pts.length) return;
+    ctx.beginPath();
+    const p0 = project(pts[0][0], pts[0][1], W, H);
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < pts.length; i++) {
+      const p = project(pts[i][0], pts[i][1], W, H);
+      ctx.lineTo(p.x, p.y);
+    }
+    if (close) ctx.closePath();
+  }
+
+  // Sea fill — east of coastline
+  ctx.save();
+  path(COAST_POINTS);
+  ctx.lineTo(project(COAST_POINTS[COAST_POINTS.length-1][0], 0.1, W, H).x, project(COAST_POINTS[COAST_POINTS.length-1][0], 0.1, W, H).y);
+  ctx.lineTo(project(COAST_POINTS[0][0], 0.1, W, H).x, project(COAST_POINTS[0][0], 0.1, W, H).y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,40,80,0.28)';
+  ctx.fill();
+
+  // Coastline
+  path(COAST_POINTS);
+  ctx.strokeStyle = 'rgba(0,180,220,0.22)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // City boundary
+  path(CITY_POINTS, true);
+  ctx.fillStyle   = 'rgba(0,212,255,0.04)';
+  ctx.strokeStyle = 'rgba(0,212,255,0.12)';
+  ctx.lineWidth   = 0.8;
+  ctx.fill();
+  ctx.stroke();
+
+  // Turia river
+  path(TURIA_POINTS);
+  ctx.strokeStyle = 'rgba(0,160,200,0.30)';
+  ctx.lineWidth   = 1.5;
+  ctx.stroke();
+
+  // Albufera
+  path(ALBUFERA_POINTS, true);
+  ctx.fillStyle   = 'rgba(0,120,180,0.18)';
+  ctx.strokeStyle = 'rgba(0,150,200,0.20)';
+  ctx.lineWidth   = 0.8;
+  ctx.fill();
+  ctx.stroke();
+
+  // Grid lines (lat/lon)
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth   = 0.5;
+  for (let lat = 39.3; lat <= 39.7; lat += 0.05) {
+    const a = project(lat, -0.6, W, H);
+    const b = project(lat,  0.1, W, H);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (let lon = -0.6; lon <= 0.1; lon += 0.05) {
+    const a = project(39.3, lon, W, H);
+    const b = project(39.7, lon, W, H);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+const N_PARTICLES = 320;
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function WindSimulator() {
-  // ── API state
-  const [stations,      setStations]      = useState([]);
-  const [currentData,   setCurrentData]   = useState([]);
-  const [apiStatus,     setApiStatus]     = useState('loading'); // 'loading'|'ok'|'error'
+  const [stations,    setStations]    = useState([]);
+  const [currentData, setCurrentData] = useState([]);
+  const [apiStatus,   setApiStatus]   = useState('loading');
+  const [sourceCode,  setSourceCode]  = useState('');
+  const [windSpeed,   setWindSpeed]   = useState(3);
+  const [windAngle,   setWindAngle]   = useState(270);
+  const [liveOverride,setLiveOverride]= useState(false);
+  const [isRunning,   setIsRunning]   = useState(true);
 
-  // ── Simulation controls
-  const [sourceCode,    setSourceCode]    = useState('');
-  const [windSpeed,     setWindSpeed]     = useState(3);
-  const [windAngle,     setWindAngle]     = useState(270); // meteorological degrees
-  const [liveOverride,  setLiveOverride]  = useState(false);
-  const [isRunning,     setIsRunning]     = useState(true);
+  const canvasRef    = useRef(null);
+  const stateRef     = useRef({ windSpeed: 3, windAngle: 270, sourceCode: '', isRunning: true });
+  const stationsRef  = useRef([]);   // always-current stations for the draw loop
+  const particleRef  = useRef([]);
+  const rafRef       = useRef(null);
+  const initialised  = useRef(false);
 
-  // ── Canvas refs
-  const canvasRef   = useRef(null);
-  const stateRef    = useRef({ windSpeed: 3, windAngle: 270, sourceX: 0, sourceY: 0, isRunning: true });
-  const particleRef = useRef([]);
-  const rafRef      = useRef(null);
+  // Keep stationsRef current without restarting loop
+  useEffect(() => { stationsRef.current = stations; }, [stations]);
 
   // ── Fetch stations
   useEffect(() => {
@@ -102,9 +193,8 @@ export default function WindSimulator() {
       .catch(() => setApiStatus('error'));
   }, []);
 
-  // ── Fetch current snapshot for live wind data
+  // ── Fetch current (live wind)
   useEffect(() => {
-    setApiStatus('loading');
     fetchCurrent()
       .then(d => {
         const s = (d.stations || d.current || []).map(normaliseStation);
@@ -114,11 +204,11 @@ export default function WindSimulator() {
       .catch(() => setApiStatus('error'));
   }, []);
 
-  // ── When source station changes, pull its live wind values (if available)
+  // ── Load live wind when station selected
   useEffect(() => {
     if (!sourceCode || !currentData.length) return;
     const live = currentData.find(s => s.code === sourceCode);
-    if (live && live.windSpeed != null && live.windDir != null) {
+    if (live?.windSpeed != null && live?.windDir != null) {
       setWindSpeed(parseFloat(live.windSpeed.toFixed(1)));
       setWindAngle(Math.round(live.windDir));
       setLiveOverride(true);
@@ -127,82 +217,98 @@ export default function WindSimulator() {
     }
   }, [sourceCode, currentData]);
 
-  // ── Keep stateRef in sync so canvas loop reads latest without re-init
+  // ── Keep stateRef in sync (no loop restart needed)
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !sourceCode) return;
-    const src = stations.find(s => s.code === sourceCode);
-    if (!src) return;
-    const { x, y } = project(src.lat, src.lon, canvas.width, canvas.height);
-    stateRef.current = { windSpeed, windAngle, sourceX: x, sourceY: y, isRunning };
-  }, [windSpeed, windAngle, sourceCode, stations, isRunning]);
+    stateRef.current = { windSpeed, windAngle, sourceCode, isRunning };
+  }, [windSpeed, windAngle, sourceCode, isRunning]);
 
-  // ── Canvas animation loop
+  // ── Single persistent animation loop
   const startLoop = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const W = canvas.width;
-    const H = canvas.height;
 
-    // Init particles around source
-    const { sourceX, sourceY } = stateRef.current;
+    function getSource() {
+      const W = canvas.width;
+      const H = canvas.height;
+      const src = stationsRef.current.find(s => s.code === stateRef.current.sourceCode);
+      if (src?.lat && src?.lon) return project(src.lat, src.lon, W, H);
+      return { x: W / 2, y: H / 2 };
+    }
+
+    // FIX 1: initialise particles at canvas centre (not 0,0)
+    // They'll snap to the correct station position within one frame
+    const W0 = canvas.width;
+    const H0 = canvas.height;
     particleRef.current = Array.from({ length: N_PARTICLES }, () =>
-      makeParticle(sourceX || W / 2, sourceY || H / 2)
+      makeParticle(W0 / 2, H0 / 2, Math.max(W0, H0) * 0.4)
     );
 
     function tick() {
-      const { windSpeed: ws, windAngle: wa, sourceX: sx, sourceY: sy, isRunning: running } = stateRef.current;
+      const W = canvas.width;
+      const H = canvas.height;
+      const { windSpeed: ws, windAngle: wa, isRunning: running } = stateRef.current;
+      const { x: sx, y: sy } = getSource();
 
-      if (!running) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
+      // FIX 2 & 3: draw geographic background each frame before fade
+      ctx.clearRect(0, 0, W, H);
+      drawGeography(ctx, W, H);
 
-      // Wind vector (meteorological convention: 0° = from north, clockwise)
-      const rad = (wa * Math.PI) / 180;
-      const U = ws * Math.sin(rad);   // east component
-      const V = ws * Math.cos(rad);   // north component
-
-      // Fade trail
-      ctx.fillStyle = 'rgba(4,6,10,0.12)';
+      // Fade overlay for particle trails
+      ctx.fillStyle = 'rgba(4,6,10,0.15)';
       ctx.fillRect(0, 0, W, H);
 
-      // Draw station markers
-      stations.forEach(s => {
-        const { x, y } = project(s.lat, s.lon, W, H);
-        ctx.beginPath();
-        ctx.arc(x, y, s.code === sourceCode ? 5 : 3, 0, Math.PI * 2);
-        ctx.fillStyle = s.code === sourceCode
-          ? 'rgba(0,212,255,0.9)'
-          : 'rgba(58,80,96,0.8)';
-        ctx.fill();
+      // Wind vector
+      const rad = (wa * Math.PI) / 180;
+      const U = ws * Math.sin(rad);
+      const V = ws * Math.cos(rad);
 
-        // Station name
-        ctx.fillStyle = s.code === sourceCode
-          ? 'rgba(200,216,232,0.85)'
-          : 'rgba(58,80,96,0.7)';
-        ctx.font = `${s.code === sourceCode ? 600 : 400} 10px "IBM Plex Mono", monospace`;
-        ctx.fillText(s.name, x + 8, y + 4);
+      // Station markers
+      stationsRef.current.forEach(s => {
+        const { x, y } = project(s.lat, s.lon, W, H);
+        const isSource = s.code === stateRef.current.sourceCode;
+
+        // Glow ring for active station
+        if (isSource) {
+          const grad = ctx.createRadialGradient(x, y, 0, x, y, 18);
+          grad.addColorStop(0, 'rgba(0,212,255,0.18)');
+          grad.addColorStop(1, 'rgba(0,212,255,0)');
+          ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2);
+          ctx.fillStyle = grad; ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(x, y, isSource ? 6 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = isSource ? 'rgba(0,212,255,0.95)' : 'rgba(58,80,96,0.85)';
+        ctx.fill();
+        ctx.strokeStyle = isSource ? 'rgba(0,212,255,0.5)' : 'rgba(80,110,130,0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = isSource ? 'rgba(200,216,232,0.9)' : 'rgba(58,80,96,0.75)';
+        ctx.font = `${isSource ? '500' : '400'} ${isSource ? 11 : 10}px "IBM Plex Mono", monospace`;
+        ctx.fillText(s.name, x + 10, y + 4);
       });
 
-      // Update & draw particles
+      if (!running) { rafRef.current = requestAnimationFrame(tick); return; }
+
+      // Particles
       const colBase = speedToColor(ws);
       particleRef.current.forEach(p => {
-        p.x += U * 0.6;
-        p.y -= V * 0.6;
+        p.x += U * 0.55;
+        p.y -= V * 0.55;
         p.age++;
 
-        // Recycle off-screen or aged-out particles
-        if (p.x < 0 || p.x > W || p.y < 0 || p.y > H || p.age > p.maxAge) {
-          Object.assign(p, makeParticle(sx || W / 2, sy || H / 2));
+        if (p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20 || p.age > p.maxAge) {
+          Object.assign(p, makeParticle(sx, sy, 30));
           return;
         }
 
         const life = 1 - p.age / p.maxAge;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
-        ctx.fillStyle = `${colBase}${(life * 0.7).toFixed(2)})`;
+        ctx.arc(p.x, p.y, 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `${colBase}${(life * 0.75).toFixed(2)})`;
         ctx.fill();
       });
 
@@ -210,46 +316,42 @@ export default function WindSimulator() {
     }
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [stations, sourceCode]);
+  }, []); // no deps — loop reads everything via refs
 
-  // ── Init / resize canvas and start loop
+  // ── Canvas init (once stations load)
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !stations.length) return;
+    if (!canvas || !stations.length || initialised.current) return;
+    initialised.current = true;
 
     const resize = () => {
       canvas.width  = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
     };
-
     resize();
+
     cancelAnimationFrame(rafRef.current);
     startLoop();
 
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement);
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      ro.disconnect();
-    };
+    return () => { cancelAnimationFrame(rafRef.current); ro.disconnect(); };
   }, [stations, startLoop]);
 
-  // ── Derived display values
+  // ── UI derived values
   const activeStation = stations.find(s => s.code === sourceCode);
   const compassDir = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const compass = compassDir[Math.round(windAngle / 22.5) % 16];
-
-  const U = (windSpeed * Math.sin((windAngle * Math.PI) / 180)).toFixed(2);
-  const V = (windSpeed * Math.cos((windAngle * Math.PI) / 180)).toFixed(2);
+  const Uval = (windSpeed * Math.sin((windAngle * Math.PI) / 180)).toFixed(2);
+  const Vval = (windSpeed * Math.cos((windAngle * Math.PI) / 180)).toFixed(2);
 
   return (
     <div className={styles.wrap}>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className={styles.header}>
-        <div className={styles.titleBlock}>
-          <span className={styles.eyebrow}>Atmospheric Dispersion · Valencia</span>
+        <div>
+          <span className={styles.eyebrow}>Atmospheric Dispersion · Valencia · RVVCCA</span>
           <h2 className={styles.title}>Wind <em>Simulator</em></h2>
         </div>
         <div className={styles.statusBadge} data-status={apiStatus}>
@@ -259,138 +361,98 @@ export default function WindSimulator() {
         </div>
       </div>
 
-      <div className={styles.layout}>
+      {/* Canvas — full width */}
+      <div className={styles.canvasWrap}>
+        <canvas ref={canvasRef} className={styles.canvas} />
 
-        {/* ── Canvas ── */}
-        <div className={styles.canvasWrap}>
-          <canvas ref={canvasRef} className={styles.canvas} />
-
-          {/* Wind direction overlay */}
-          <div className={styles.windOverlay}>
-            <div className={styles.windArrow} style={{ transform: `rotate(${windAngle}deg)` }}>↑</div>
-            <div className={styles.windLabel}>{windAngle}° {compass}</div>
-          </div>
-
-          <button
-            className={`${styles.pauseBtn} ${!isRunning ? styles.paused : ''}`}
-            onClick={() => {
-              setIsRunning(r => !r);
-              stateRef.current.isRunning = !stateRef.current.isRunning;
-            }}
-          >
-            {isRunning ? '⏸ Pause' : '▶ Resume'}
-          </button>
+        {/* Wind compass overlay */}
+        <div className={styles.windOverlay}>
+          <div className={styles.windArrow} style={{ transform: `rotate(${windAngle}deg)` }}>↑</div>
+          <div className={styles.windLabel}>{windAngle}° {compass}</div>
+          <div className={styles.windSpeed}>{windSpeed.toFixed(1)} m/s</div>
         </div>
 
-        {/* ── Controls panel ── */}
-        <div className={styles.panel}>
+        {/* Pause */}
+        <button
+          className={`${styles.pauseBtn} ${!isRunning ? styles.paused : ''}`}
+          onClick={() => { setIsRunning(r => !r); stateRef.current.isRunning = !stateRef.current.isRunning; }}
+        >
+          {isRunning ? '⏸ Pause' : '▶ Resume'}
+        </button>
 
-          {/* Source station */}
-          <div className={styles.controlGroup}>
-            <label className={styles.label}>Emission Source</label>
-            <select
-              className={styles.select}
-              value={sourceCode}
-              onChange={e => setSourceCode(e.target.value)}
-            >
-              {stations.map(s => (
-                <option key={s.code} value={s.code}>{s.name}</option>
-              ))}
-            </select>
-            {liveOverride && (
-              <span className={styles.liveTag}>↻ Live values loaded</span>
-            )}
-          </div>
-
-          {/* Wind direction */}
-          <div className={styles.controlGroup}>
-            <label className={styles.label}>
-              Wind Direction
-              <span className={styles.sliderVal}>{windAngle}° {compass}</span>
-            </label>
-            <input
-              type="range" min="0" max="359" step="1"
-              value={windAngle}
-              className={styles.slider}
-              onChange={e => { setWindAngle(+e.target.value); setLiveOverride(false); }}
-            />
-            <div className={styles.sliderHint}>0° = from North · clockwise</div>
-          </div>
-
-          {/* Wind speed */}
-          <div className={styles.controlGroup}>
-            <label className={styles.label}>
-              Wind Speed
-              <span className={styles.sliderVal}>{windSpeed.toFixed(1)} m/s</span>
-            </label>
-            <input
-              type="range" min="0" max="10" step="0.1"
-              value={windSpeed}
-              className={styles.slider}
-              onChange={e => { setWindSpeed(+e.target.value); setLiveOverride(false); }}
-            />
-          </div>
-
-          {/* Vector readout */}
-          <div className={styles.vectorBox}>
-            <div className={styles.vectorLabel}>Wind vector components</div>
-            <div className={styles.vectorRow}>
-              <span className={styles.vectorKey}>U (east)</span>
-              <span className={styles.vectorVal} style={{ color: U >= 0 ? 'var(--cyan)' : 'var(--amber)' }}>
-                {U > 0 ? '+' : ''}{U} m/s
-              </span>
-            </div>
-            <div className={styles.vectorRow}>
-              <span className={styles.vectorKey}>V (north)</span>
-              <span className={styles.vectorVal} style={{ color: V >= 0 ? 'var(--cyan)' : 'var(--amber)' }}>
-                {V > 0 ? '+' : ''}{V} m/s
-              </span>
-            </div>
-          </div>
-
-          {/* Reset to live */}
-          {!liveOverride && apiStatus === 'ok' && activeStation && (
-            <button
-              className={styles.resetBtn}
-              onClick={() => {
-                const live = currentData.find(s => s.code === sourceCode);
-                if (live?.windSpeed != null) {
-                  setWindSpeed(parseFloat(live.windSpeed.toFixed(1)));
-                  setWindAngle(Math.round(live.windDir));
-                  setLiveOverride(true);
-                }
-              }}
-            >
-              ↻ Reset to live values
-            </button>
-          )}
-
-          {/* Station info */}
-          {activeStation && (
-            <div className={styles.stationInfo}>
-              <div className={styles.vectorLabel}>Selected station</div>
-              <div className={styles.vectorRow}>
-                <span className={styles.vectorKey}>Name</span>
-                <span className={styles.vectorVal}>{activeStation.name}</span>
-              </div>
-              <div className={styles.vectorRow}>
-                <span className={styles.vectorKey}>Lat</span>
-                <span className={styles.vectorVal}>{activeStation.lat?.toFixed(4)}</span>
-              </div>
-              <div className={styles.vectorRow}>
-                <span className={styles.vectorKey}>Lon</span>
-                <span className={styles.vectorVal}>{activeStation.lon?.toFixed(4)}</span>
-              </div>
-            </div>
-          )}
-
-          <div className={styles.disclaimer}>
-            Particles represent dispersion direction only — not concentration or AQI. 
-            Wind data is provisional (RVVCCA / GVA).
-          </div>
-
+        {/* Map legend */}
+        <div className={styles.legend}>
+          <div className={styles.legendRow}><span style={{background:'rgba(0,180,220,0.5)'}} className={styles.legendDot}/> Coastline</div>
+          <div className={styles.legendRow}><span style={{background:'rgba(0,212,255,0.9)'}} className={styles.legendDot}/> Active station</div>
+          <div className={styles.legendRow}><span style={{background:'rgba(58,80,96,0.85)'}} className={styles.legendDot}/> Station</div>
         </div>
       </div>
+
+      {/* Controls — below canvas, horizontal */}
+      <div className={styles.controls}>
+
+        <div className={styles.controlGroup}>
+          <label className={styles.label}>Emission Source</label>
+          <select className={styles.select} value={sourceCode} onChange={e => setSourceCode(e.target.value)}>
+            {stations.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+          </select>
+          {liveOverride && <span className={styles.liveTag}>↻ Live values loaded</span>}
+        </div>
+
+        <div className={styles.controlGroup}>
+          <label className={styles.label}>
+            Wind Direction <span className={styles.sliderVal}>{windAngle}° {compass}</span>
+          </label>
+          <input type="range" min="0" max="359" step="1" value={windAngle}
+            className={styles.slider}
+            onChange={e => { setWindAngle(+e.target.value); setLiveOverride(false); }} />
+          <span className={styles.sliderHint}>0° = from North · clockwise</span>
+        </div>
+
+        <div className={styles.controlGroup}>
+          <label className={styles.label}>
+            Wind Speed <span className={styles.sliderVal}>{windSpeed.toFixed(1)} m/s</span>
+          </label>
+          <input type="range" min="0" max="10" step="0.1" value={windSpeed}
+            className={styles.slider}
+            onChange={e => { setWindSpeed(+e.target.value); setLiveOverride(false); }} />
+        </div>
+
+        <div className={styles.vectorBox}>
+          <div className={styles.vectorLabel}>Vector</div>
+          <div className={styles.vectorRow}>
+            <span className={styles.vectorKey}>U (east)</span>
+            <span className={styles.vectorVal} style={{ color: Uval >= 0 ? 'var(--cyan)' : 'var(--amber)' }}>
+              {Uval > 0 ? '+' : ''}{Uval}
+            </span>
+          </div>
+          <div className={styles.vectorRow}>
+            <span className={styles.vectorKey}>V (north)</span>
+            <span className={styles.vectorVal} style={{ color: Vval >= 0 ? 'var(--cyan)' : 'var(--amber)' }}>
+              {Vval > 0 ? '+' : ''}{Vval}
+            </span>
+          </div>
+        </div>
+
+        {!liveOverride && apiStatus === 'ok' && activeStation && (
+          <div className={styles.controlGroup}>
+            <button className={styles.resetBtn} onClick={() => {
+              const live = currentData.find(s => s.code === sourceCode);
+              if (live?.windSpeed != null) {
+                setWindSpeed(parseFloat(live.windSpeed.toFixed(1)));
+                setWindAngle(Math.round(live.windDir));
+                setLiveOverride(true);
+              }
+            }}>↻ Reset to live</button>
+          </div>
+        )}
+
+      </div>
+
+      <div className={styles.disclaimer}>
+        Particles represent dispersion direction only — not concentration or AQI. Wind data is provisional (RVVCCA / GVA).
+      </div>
+
     </div>
   );
 }
