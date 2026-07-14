@@ -6,12 +6,16 @@
   padding: 5rem 3.5rem 4rem;
 }
 
+@media (max-width: 768px) {
+  .wrap { padding: 4rem 1.25rem 3rem; }
+}
+
 /* ── Header ── */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -32,7 +36,7 @@
   font-weight: 300;
   font-size: clamp(2rem, 3.5vw, 3rem);
   color: var(--text);
-  line-height: 1.1;
+  line-height: 1.08;
   margin: 0;
 }
 
@@ -43,40 +47,31 @@
 
 .statusBadge {
   font-family: var(--mono);
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 0.4rem 0.8rem;
+  padding: 0.4rem 0.85rem;
   border-radius: 3px;
   border: 1px solid var(--rim);
   background: var(--glass);
+  backdrop-filter: blur(12px);
+  white-space: nowrap;
 }
-
-.statusBadge[data-status='loading'] { color: var(--amber); }
-.statusBadge[data-status='ok']      { color: var(--green); }
+.statusBadge[data-status='loading'] { color: var(--amber); border-color: rgba(255,154,0,0.2); }
+.statusBadge[data-status='ok']      { color: var(--green); border-color: rgba(57,217,138,0.2); }
 .statusBadge[data-status='error']   { color: var(--muted); }
 
-/* ── Layout ── */
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 1rem;
-  align-items: start;
-}
-
-@media (max-width: 768px) {
-  .layout { grid-template-columns: 1fr; }
-  .wrap   { padding: 4rem 1.5rem 3rem; }
-}
-
-/* ── Canvas ── */
+/* ── Canvas — full width, taller ── */
 .canvasWrap {
   position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 420px;
   border: 1px solid var(--rim);
-  border-radius: 5px;
-  background: var(--void);
+  border-radius: 6px;
+  background: #03050a;
   overflow: hidden;
-  aspect-ratio: 4 / 3;
+  margin-bottom: 1rem;
 }
 
 .canvas {
@@ -85,24 +80,29 @@
   display: block;
 }
 
-/* Wind direction overlay */
+/* Wind compass — top left */
 .windOverlay {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: 1.1rem;
+  left: 1.1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   pointer-events: none;
+  background: rgba(4,6,10,0.65);
+  border: 1px solid var(--rim);
+  border-radius: 4px;
+  padding: 0.6rem 0.75rem;
+  backdrop-filter: blur(8px);
 }
 
 .windArrow {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   color: var(--cyan);
   line-height: 1;
-  transition: transform 0.4s ease;
-  filter: drop-shadow(0 0 6px rgba(0,212,255,0.5));
+  transition: transform 0.35s ease;
+  filter: drop-shadow(0 0 5px rgba(0,212,255,0.55));
 }
 
 .windLabel {
@@ -110,46 +110,85 @@
   font-size: 0.58rem;
   letter-spacing: 0.1em;
   color: var(--cyan);
-  background: rgba(4,6,10,0.7);
-  padding: 2px 6px;
-  border-radius: 2px;
 }
 
+.windSpeed {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+/* Pause button — bottom right */
 .pauseBtn {
   position: absolute;
-  bottom: 0.75rem;
-  right: 0.75rem;
+  bottom: 0.85rem;
+  right: 0.85rem;
   font-family: var(--mono);
   font-size: 0.52rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-  background: rgba(4,6,10,0.75);
+  background: rgba(4,6,10,0.72);
   border: 1px solid var(--rim);
   border-radius: 3px;
-  padding: 0.35rem 0.7rem;
+  padding: 0.38rem 0.72rem;
   cursor: pointer;
   backdrop-filter: blur(8px);
   transition: color 0.15s, border-color 0.15s;
 }
-
 .pauseBtn:hover { color: var(--text); }
 .pauseBtn.paused { color: var(--green); border-color: rgba(57,217,138,0.3); }
 
-/* ── Control panel ── */
-.panel {
+/* Map legend — bottom left */
+.legend {
+  position: absolute;
+  bottom: 0.85rem;
+  left: 0.85rem;
+  background: rgba(4,6,10,0.65);
+  border: 1px solid var(--rim);
+  border-radius: 4px;
+  padding: 0.55rem 0.75rem;
+  backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  background: var(--glass);
-  border: 1px solid var(--rim);
-  border-radius: 5px;
-  padding: 1.25rem;
-  backdrop-filter: blur(22px);
-  position: relative;
+  gap: 4px;
 }
 
-.panel::before {
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.legendDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Controls — horizontal bar below canvas ── */
+.controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  border-radius: 6px;
+  padding: 1.1rem 1.35rem;
+  backdrop-filter: blur(22px);
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.controls::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; height: 1px;
@@ -160,12 +199,14 @@
 .controlGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  min-width: 160px;
+  flex: 1;
 }
 
 .label {
   font-family: var(--mono);
-  font-size: 0.52rem;
+  font-size: 0.5rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--muted);
@@ -177,28 +218,28 @@
 .sliderVal {
   color: var(--text);
   font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
 .sliderHint {
   font-family: var(--mono);
-  font-size: 0.48rem;
+  font-size: 0.46rem;
   color: var(--muted);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .liveTag {
   font-family: var(--mono);
-  font-size: 0.5rem;
-  letter-spacing: 0.1em;
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
   color: var(--green);
-  margin-top: 2px;
 }
 
 .select {
   font-family: var(--mono);
   font-size: 0.62rem;
   color: var(--text);
-  background: rgba(4,6,10,0.6);
+  background: rgba(4,6,10,0.55);
   border: 1px solid var(--rim);
   border-radius: 4px;
   padding: 0.45rem 0.65rem;
@@ -207,7 +248,7 @@
   transition: border-color 0.2s;
 }
 .select:focus { border-color: var(--cyan); }
-.select option { background: var(--deep, #070c12); }
+.select option { background: #070c12; }
 
 /* Range slider */
 .slider {
@@ -230,7 +271,7 @@
   cursor: pointer;
   transition: transform 0.15s;
 }
-.slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
 .slider::-moz-range-thumb {
   width: 13px; height: 13px;
   border-radius: 50%;
@@ -239,33 +280,36 @@
   cursor: pointer;
 }
 
-/* Vector readout */
+/* Vector box */
 .vectorBox {
   background: rgba(4,6,10,0.4);
   border: 1px solid var(--rim);
   border-radius: 4px;
-  padding: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  min-width: 120px;
+  flex: 0 0 auto;
 }
 
 .vectorLabel {
   font-family: var(--mono);
-  font-size: 0.48rem;
+  font-size: 0.46rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.45rem;
 }
 
 .vectorRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   margin-bottom: 3px;
 }
 
 .vectorKey {
   font-family: var(--mono);
-  font-size: 0.55rem;
+  font-size: 0.52rem;
   color: var(--muted);
 }
 
@@ -273,10 +317,9 @@
   font-family: var(--mono);
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--text);
 }
 
-/* Reset btn */
+/* Reset button */
 .resetBtn {
   font-family: var(--mono);
   font-size: 0.52rem;
@@ -286,20 +329,13 @@
   background: rgba(57,217,138,0.08);
   border: 1px solid rgba(57,217,138,0.25);
   border-radius: 4px;
-  padding: 0.45rem 0.75rem;
+  padding: 0.48rem 0.9rem;
   cursor: pointer;
   transition: background 0.15s;
-  width: 100%;
+  white-space: nowrap;
+  align-self: flex-end;
 }
-.resetBtn:hover { background: rgba(57,217,138,0.14); }
-
-/* Station info */
-.stationInfo {
-  background: rgba(4,6,10,0.4);
-  border: 1px solid var(--rim);
-  border-radius: 4px;
-  padding: 0.75rem;
-}
+.resetBtn:hover { background: rgba(57,217,138,0.15); }
 
 /* Disclaimer */
 .disclaimer {
@@ -307,7 +343,6 @@
   font-size: 0.48rem;
   color: var(--muted);
   line-height: 1.7;
-  opacity: 0.7;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--rim);
+  opacity: 0.6;
+  letter-spacing: 0.04em;
 }
