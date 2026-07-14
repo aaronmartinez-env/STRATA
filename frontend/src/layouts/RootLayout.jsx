@@ -139,6 +139,12 @@ export default function RootLayout() {
             Live
           </NavLink>
           <NavLink
+            to="/wind"
+            className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+          >
+            Wind
+          </NavLink>
+          <NavLink
             to="/case-studies/valencia-2021-2022"
             className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
           >
