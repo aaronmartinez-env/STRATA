@@ -255,6 +255,12 @@ export default function WindSimulator() {
       return { x: W / 2, y: H / 2 };
     }
 
+    // Guard: ensure canvas has real dimensions before initialising particles
+    if (!canvas.width || !canvas.height) {
+      canvas.width  = canvas.offsetWidth  || 800;
+      canvas.height = canvas.offsetHeight || 450;
+    }
+
     // Initialise particles spread across the canvas so it looks populated immediately.
     // They'll be recycled to upwind edges as they age out.
     const W0 = canvas.width;
@@ -271,8 +277,10 @@ export default function WindSimulator() {
     });
 
     function tick() {
-      const W = canvas.width;
-      const H = canvas.height;
+      const W = canvas.width  || canvas.offsetWidth  || 800;
+      const H = canvas.height || canvas.offsetHeight || 450;
+      if (canvas.width !== W) canvas.width = W;
+      if (canvas.height !== H) canvas.height = H;
       const { windSpeed: ws, windAngle: wa, isRunning: running } = stateRef.current;
       const { x: sx, y: sy } = getSource();
 
