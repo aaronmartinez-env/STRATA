@@ -12,8 +12,15 @@
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+    "@turf/bbox": "^7.3.5",
+    "@turf/helpers": "^7.3.5",
+    "@turf/interpolate": "^7.3.5",
+    "@turf/isobands": "^7.3.5",
+    "@turf/points-within-polygon": "^7.3.5",
+    "leaflet": "^1.9.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.1",
     "recharts": "^3.9.2",
     "three": "^0.185.1"

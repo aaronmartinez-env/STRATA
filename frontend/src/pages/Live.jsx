@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchStations, fetchHourly, fetchCurrent } from '../api';
 import CityViz3D from '../components/CityViz3D';
 import MultiFieldChart from '../components/MultiFieldChart';
+import AirQualityHeatmap from '../components/AirQualityHeatmap';
 import './Live.css';
 
 const OVERVIEW_FIELDS = ['pm10', 'pm25', 'no2', 'o3'];
@@ -36,6 +37,8 @@ export default function Live() {
   const [compareStation, setCompareStation] = useState('');
   const [compareReadings, setCompareReadings] = useState([]);
   const [compareLoading, setCompareLoading] = useState(false);
+
+  const [heatmapField, setHeatmapField] = useState('pm10');
 
   useEffect(() => {
     fetchStations().then((data) => {
@@ -192,6 +195,32 @@ export default function Live() {
             compareLabel={compareLabel}
           />
         )}
+      </section>
+
+      <section className="live-section">
+        <div className="sec-head"><div className="sec-num">04</div><h2 className="sec-title">Regional <em>surface</em></h2></div>
+        <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '1rem' }}>
+          An interpolated concentration surface across Valencia, built from the {currentSnapshot.length || 7}
+          station readings above — same "ambient glow" style as smartphone weather apps.
+        </p>
+        <div className="live-controls" style={{ marginBottom: '1rem' }}>
+          <div className="control-group">
+            <span className="live-label">Pollutant</span>
+            <select className="live-input" value={heatmapField} onChange={(e) => setHeatmapField(e.target.value)}>
+              <option value="pm10">PM10</option>
+              <option value="pm25">PM2.5</option>
+              <option value="no2">NO2</option>
+              <option value="o3">O3</option>
+            </select>
+          </div>
+        </div>
+        <div className="glass-panel" style={{ padding: '0.75rem' }}>
+          <AirQualityHeatmap stations={currentSnapshot} field={heatmapField} />
+        </div>
+        <p style={{ fontSize: '0.7rem', opacity: 0.55, marginTop: '0.75rem', fontFamily: 'var(--mono)' }}>
+          ⚠ Interpolated from only {currentSnapshot.length || 7} monitoring stations — a smoothed visual estimate,
+          not a validated concentration map. Treat it as illustrative, not measurement-grade between sensors.
+        </p>
       </section>
 
       <footer className="live-attribution">
